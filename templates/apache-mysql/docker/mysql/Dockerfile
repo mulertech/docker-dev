@@ -1,13 +1,5 @@
 FROM mysql:8.0
 
-# Install useful tools
-RUN apt-get update && apt-get install -y \
-    vim \
-    nano \
-    curl \
-    wget \
-    && rm -rf /var/lib/apt/lists/*
-
 # MySQL configuration for development
 RUN echo '[mysqld]' >> /etc/mysql/conf.d/custom.cnf \
     && echo 'max_connections = 200' >> /etc/mysql/conf.d/custom.cnf \

@@ -67,6 +67,11 @@ function getProjectName(): string
     return str_replace('.', '-', getContainerName());
 }
 
+function getProjectBaseName(): string
+{
+    return basename(getProjectDir());
+}
+
 function getDbPort(): int
 {
     // Generate a port between 10000-65000 based on container name hash
@@ -92,7 +97,7 @@ function autoInitTemplate(): void
     
     $projectDir = getProjectDir();
     $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
-    $templatesPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $template;
+    $templatesPath = __DIR__ . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $template;
 
     if (!is_dir($templatesPath)) {
         echo "Error: Template '$template' not found.\n";
@@ -102,8 +107,9 @@ function autoInitTemplate(): void
     // Create .mtdocker directory
     mkdir($mtdockerPath, 0755, true);
 
-    // Copy template files
-    exec("cp -r " . escapeshellarg($templatesPath) . "/* " . escapeshellarg($mtdockerPath));
+    // Copy template files (including hidden files)
+    exec("cp -r " . escapeshellarg($templatesPath) . "/. " . escapeshellarg($mtdockerPath) . " 2>/dev/null || true");
+    exec("cp -r " . escapeshellarg($templatesPath) . "/* " . escapeshellarg($mtdockerPath) . " 2>/dev/null || true");
 
     // Create .env file from .env.example
     $envExamplePath = $mtdockerPath . DIRECTORY_SEPARATOR . '.env.example';
@@ -123,8 +129,14 @@ function autoInitTemplate(): void
 
         // Auto-detect PHP version and image
         $phpVersion = getPhpVersion();
-        $phpImage = 'php:' . ($phpVersion === '' ? '8.3' : $phpVersion) . '-fpm-alpine';
-        $envContent = str_replace('PHP_IMAGE=php:8.3-fpm-alpine', "PHP_IMAGE=$phpImage", $envContent);
+        $phpImage = 'php:' . ($phpVersion === '' ? '8.3' : $phpVersion) . '-fmp-alpine';
+        $envContent = str_replace('PHP_IMAGE=php:8.3-fmp-alpine', "PHP_IMAGE=$phpImage", $envContent);
+
+        // Generate container names based on project
+        $apacheContainerName = getContainerName(); // docker-database-8-4
+        $projectBaseName = getProjectBaseName(); // database
+        $envContent = str_replace('CONTAINER_NAME_APACHE=apache-php', "CONTAINER_NAME_APACHE=$apacheContainerName", $envContent);
+        $envContent = str_replace('CONTAINER_NAME_MYSQL=mysql-db', "CONTAINER_NAME_MYSQL=$projectBaseName-mysql", $envContent);
 
         // Generate available ports
         $envContent = generateAvailablePorts($envContent);
@@ -162,7 +174,7 @@ function initTemplate(string $template): void
 
     $projectDir = getProjectDir();
     $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
-    $templatesPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $template;
+    $templatesPath = __DIR__ . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $template;
 
     if (!is_dir($templatesPath)) {
         echo "Template '$template' not found.\n";
@@ -187,8 +199,9 @@ function initTemplate(string $template): void
     // Create .mtdocker directory
     mkdir($mtdockerPath, 0755, true);
 
-    // Copy template files
-    exec("cp -r " . escapeshellarg($templatesPath) . "/* " . escapeshellarg($mtdockerPath));
+    // Copy template files (including hidden files)
+    exec("cp -r " . escapeshellarg($templatesPath) . "/. " . escapeshellarg($mtdockerPath) . " 2>/dev/null || true");
+    exec("cp -r " . escapeshellarg($templatesPath) . "/* " . escapeshellarg($mtdockerPath) . " 2>/dev/null || true");
 
     // Create .env file from .env.example
     $envExamplePath = $mtdockerPath . DIRECTORY_SEPARATOR . '.env.example';
