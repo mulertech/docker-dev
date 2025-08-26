@@ -7,11 +7,11 @@ ___
 ___
 
 
-The **MulerTech Docker-dev** package allows you to configure and run PHP tests in a Docker environment and manage development environments with templates.
+The **MulerTech Docker-dev** package provides complete Docker-based development environments for web projects with multiple templates (Apache, MySQL, Symfony) and includes integrated testing capabilities.
 
 ## Description
 
-This package configures a Docker container to run PHP tests using PHPUnit. It creates a .env.test file with the necessary information to build the Docker image and run the tests.
+This package simplifies web development by providing pre-configured Docker environments for different project types. It offers ready-to-use templates for various development stacks and includes integrated testing tools (PHPUnit, PHPStan, PHP-CS-Fixer) that work seamlessly within the containerized environment.
 
 ## Prerequisites
 
@@ -35,7 +35,52 @@ This package configures a Docker container to run PHP tests using PHPUnit. It cr
 
 ## Usage
 
-### Running the tests
+### Development Environment Templates
+
+The primary feature of this package is to quickly set up complete development environments. Initialize your project with:
+
+```sh
+# Auto-detect and initialize the best template for your project
+./vendor/bin/mtdocker init
+
+# Or choose a specific template
+./vendor/bin/mtdocker init symfony
+./vendor/bin/mtdocker init apache-mysql  
+./vendor/bin/mtdocker init apache-simple
+```
+
+This creates a complete development environment with web server, database (if needed), and all necessary services ready to use.
+
+**🚀 Zero-Configuration Mode:**
+You can also just run any command directly and the environment will be auto-initialized:
+
+```sh
+# These commands automatically set up your environment if needed
+./vendor/bin/mtdocker up -d
+./vendor/bin/mtdocker test
+./vendor/bin/mtdocker down
+```
+
+No manual setup required - the system detects your project type and creates the appropriate environment automatically.
+
+### Managing Your Development Environment
+
+```sh
+# Start your development environment
+./vendor/bin/mtdocker up -d
+
+# Stop your environment
+./vendor/bin/mtdocker down
+
+# Check environment status
+./vendor/bin/mtdocker ps
+```
+
+### Testing and Code Quality Tools
+
+Integrated testing tools work seamlessly within your development environment:
+
+#### Running the tests
 
 To run the tests, use the following command:
 
@@ -98,39 +143,9 @@ This command will:
 - Run php-cs-fixer, phpunit and phpstan in the container.
 - Stop the container if it was not running before the checks were executed.
 
-### Starting the Docker container
+### Advanced Configuration
 
-To start the Docker container, use the following command :
-
-```sh
-./vendor/bin/mtdocker up
-```
-
-To start the Docker container in detached mode, use the following command :
-
-```sh
-./vendor/bin/mtdocker up -d
-```
-
-### Stopping the Docker container
-
-To stop the Docker container, use the following command :
-
-```sh
-./vendor/bin/mtdocker down
-```
-
-### Checking the status of containers
-
-To check the status of the Docker containers, use the following command:
-
-```sh
-./vendor/bin/mtdocker ps
-```
-
-This command will display all containers related to the project and their current status.
-
-### Getting the project name
+#### Getting the project name
 
 To get the project name used for Docker Compose (useful for PHPStorm configuration), use the following command:
 
@@ -138,137 +153,63 @@ To get the project name used for Docker Compose (useful for PHPStorm configurati
 ./vendor/bin/mtdocker name
 ```
 
-This command will output the project name that should be used in the `COMPOSE_PROJECT_NAME` environment variable when configuring PHPStorm. (see below)
+This command will output the project name that should be used in the `COMPOSE_PROJECT_NAME` environment variable when configuring PHPStorm.
 
-### Initializing templates
+### Available Templates
 
-To initialize a development environment template, use one of the following commands:
-
-```sh
-# Auto-detect template based on composer.json (recommended)
-./vendor/bin/mtdocker init
-
-# Or specify a template explicitly
-./vendor/bin/mtdocker init apache-simple
-./vendor/bin/mtdocker init apache-mysql
-./vendor/bin/mtdocker init symfony
-```
-
-This command will:
-- Create a `.mtdocker/` directory in your project root
-- Copy all necessary Docker configuration files
-- Create a `.env` file with auto-detected system settings (USER_ID, GROUP_ID, PHP version)
-- Generate deterministic ports based on project name to avoid conflicts
-- Provide a complete development environment ready to use
-
-**Auto-detection logic:**
+**Template auto-detection:**
 - If `composer.json` contains `ext-pdo` → `apache-mysql` template
 - If no `ext-pdo` found → `apache-simple` template
 
 **Available templates:**
-- `apache-simple`: Basic Apache + PHP environment (equivalent to legacy test system)
-- `apache-mysql`: Apache + PHP + MySQL environment (equivalent to legacy test system with database)
+- `apache-simple`: Basic Apache + PHP environment for simple web projects
+- `apache-mysql`: Apache + PHP + MySQL environment for database-driven applications  
 - `symfony`: Complete Symfony development environment with Apache, MySQL, PhpMyAdmin, Redis, and MailHog
 
-### Configuring the Docker container into PHPStorm
+**Template initialization process:**
+- Creates a `.mtdocker/` directory in your project root
+- Copies all necessary Docker configuration files
+- Creates a `.env` file with auto-detected system settings (USER_ID, GROUP_ID, PHP version)
+- Generates deterministic ports based on project name to avoid conflicts
+- Provides a complete development environment ready to use
 
-To configure the Docker container into PHPStorm, follow these steps:
+## IDE Integration
 
-1. Open the PHPStorm settings.
-2. Go to `PHP`.
-3. Click on the `...` button next to the `CLI Interpreter` field.
-4. Click on the `+` button and select `From Docker, Vagrant, VM, WSL, Remote...`.
-5. Configure the remote PHP interpreter as follows:
-    - Select `Docker Compose`.
-    - Set the server to `Docker` or click on `New...` if this server does not exist and :
-        - Set the name to `Docker`.
-        - Select `Docker for Windows` or `Unix socket` depending on your system.
-        - Click on `OK`.
-    - Set the configuration files to `./mt-compose.yml`.
-    - Set the service to `php`.
-    - Set the Environment variables to `COMPOSE_PROJECT_NAME=<project name>` the project name is given by the "./vendor/bin/mtdocker name" command line argument. (see above)
-    - Click on `OK`.
-6. Click on `OK` to save the configuration.
+### PHPStorm Configuration
 
-To configure PHPUnit, follow these steps:
+Configure PHPStorm to work with your Docker development environment:
 
-1. Go to `PHP` > `Test Frameworks`.
-2. Click on the `+` button and select `PHPUnit by Remote Interpreter`.
-3. Set the interpreter to `php` and click on `OK`.
-4. Set the path to script to `/var/www/html/vendor/autoload.php`.
-5. Click on `OK` to save the configuration.
+**PHP Interpreter Setup:**
+1. Open PHPStorm settings → `PHP`
+2. Click `...` next to `CLI Interpreter` field
+3. Add new interpreter: `From Docker, Vagrant, VM, WSL, Remote...`
+4. Configure Docker Compose interpreter:
+   - Server: `Docker` (create new if needed)
+   - Configuration files: `./.mtdocker/compose.yml`
+   - Service: `apache` or `php`
+   - Environment variables: `COMPOSE_PROJECT_NAME=<project name>` (get with `./vendor/bin/mtdocker name`)
 
-### Creating the `mt-compose.yml` file
+**PHPUnit Integration:**
+1. Go to `PHP` → `Test Frameworks`
+2. Add `PHPUnit by Remote Interpreter`
+3. Select your Docker interpreter
+4. Path to script: `/var/www/html/vendor/autoload.php`
 
-The `mt-compose.yml` file is created automatically when the container starts. It contains the following information :
+## How It Works
 
-```sh
-services:
-  php:
-    build:
-      context: .
-      dockerfile: "./vendor/mulertech/docker-dev/Dockerfile"
-      args:
-        USER_ID: $uid
-        GROUP_ID: $gid
-        PHP_IMAGE: "$image"
-    container_name: "$containerName"
-    volumes:
-      - "./:/var/www/html"
-    environment:
-      PHP_CS_FIXER_IGNORE_ENV: 1
-```
+**Automatic Environment Setup:**
+- When you run any command, the system automatically detects if a development environment exists
+- If no `.mtdocker/` directory is found, it auto-initializes the appropriate template
+- Templates are chosen based on your `composer.json` dependencies (MySQL if `ext-pdo` is present)
 
-The `USER_ID` and `GROUP_ID` are used to set the user and group of the current user in the Docker container.
-This is done to avoid permission issues when running the tests and to create files or folders (if needed) with the correct permissions.
-The `PHP_IMAGE` is `php:<php version>-fpm-alpine`, the php version is set from the required version in the `composer.json` file.
-The `container_name` is set to `mt-docker-<package name>-<php version>`.
+**Template Features:**
+- Pre-configured Docker environments for different project types
+- Auto-detected system settings (USER_ID, GROUP_ID, PHP version)
+- Deterministic port generation to avoid conflicts between projects
+- Complete development stacks ready to use immediately
 
-### Adding the database to mt-compose.yml
-
-If your project requires a database (the composer.json file contains ext-pdo),
-the mt-compose.yml file will be automatically updated to include a database service. Here is an example configuration for MySQL:
-
-```sh
-services:
-  php:
-    build:
-      context: .
-      dockerfile: "./vendor/mulertech/docker-dev/Dockerfile"
-      args:
-        USER_ID: $uid
-        GROUP_ID: $gid
-        PHP_IMAGE: "$image"
-    container_name: "$containerName"
-    volumes:
-      - "./:/var/www/html"
-    environment:
-      PHP_CS_FIXER_IGNORE_ENV: 1
-      DATABASE_HOST: db
-      DATABASE_PORT: "3306"
-      DATABASE_PATH: "/db"
-      DATABASE_SCHEME: "mysql"
-      DATABASE_QUERY: "serverVersion=5.7"
-      DATABASE_USER: "user"
-      DATABASE_PASS: "password"
-    links:
-      - db
-    networks:
-      - default
-  db:
-    image: "mysql:8"
-    environment:
-      MYSQL_DATABASE: db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
-      MYSQL_ROOT_PASSWORD: root
-    ports:
-      - "$dbPort:3306"
-    networks:
-      - default
-```
-
-This configuration adds a db service using the mysql:8 image and sets the necessary environment variables to connect to the database from the PHP container.
-The database is also exposed on a unique port on your host machine, derived from the container name.
-This ensures that different projects can run simultaneously without port conflicts.
-The port is deterministically generated based on the container name and will be consistent for the same project.
+**Smart Defaults:**
+- PHP version auto-detected from `composer.json`
+- Database services included when needed
+- Unique container names and ports per project
+- No manual configuration required

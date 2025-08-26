@@ -50,65 +50,65 @@ function getDbPort(): int
     return 10000 + (hexdec(substr($hash, 0, 4)) % 55000);
 }
 
-function createComposeFile(): void
+function ensureEnvironment(): void
 {
-    $uid = getmyuid();
-    $gid = getmygid();
-    $phpVersion = getPhpVersion();
-    $image = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'fpm-alpine';
-    $containerName = getContainerName();
+    $projectDir = getProjectDir();
+    $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
+    
+    if (!file_exists($mtdockerPath . DIRECTORY_SEPARATOR . 'compose.yml')) {
+        echo "No .mtdocker environment found. Initializing...\n";
+        autoInitTemplate();
+    }
+}
 
-    $content = <<<EOF
-services:
-  php:
-    build:
-      context: .
-      dockerfile: "./vendor/mulertech/docker-dev/Dockerfile"
-      args:
-        USER_ID: $uid
-        GROUP_ID: $gid
-        PHP_IMAGE: "$image"
-    container_name: "$containerName"
-    volumes:
-      - "./:/var/www/html"
-    environment:
-      PHP_CS_FIXER_IGNORE_ENV: 1
-EOF;
+function autoInitTemplate(): void
+{
+    // Auto-detect template based on project
+    $template = dbNeeded() ? 'apache-mysql' : 'apache-simple';
+    
+    $projectDir = getProjectDir();
+    $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
+    $templatesPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $template;
 
-    if (dbNeeded()) {
-        $dbPort = getDbPort();
-        $content .= <<<EOF
-
-      DATABASE_HOST: db
-      DATABASE_PORT: "3306"
-      DATABASE_PATH: "/db"
-      DATABASE_SCHEME: "mysql"
-      DATABASE_QUERY: "serverVersion=5.7"
-      DATABASE_USER: "user"
-      DATABASE_PASS: "password"
-    links:
-      - db
-    networks:
-      - default
-  db:
-    image: "mysql:8"
-    environment:
-      MYSQL_DATABASE: db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
-      MYSQL_ROOT_PASSWORD: root
-    ports:
-      - "$dbPort:3306"
-    networks:
-      - default
-EOF;
+    if (!is_dir($templatesPath)) {
+        echo "Error: Template '$template' not found.\n";
+        return;
     }
 
-    $write = file_put_contents(getProjectDir() . DIRECTORY_SEPARATOR . 'mt-compose.yml', $content);
+    // Create .mtdocker directory
+    mkdir($mtdockerPath, 0755, true);
 
-    if ($write === false) {
-        echo 'Failed to create mt-compose.yml file';
+    // Copy template files
+    exec("cp -r " . escapeshellarg($templatesPath) . "/* " . escapeshellarg($mtdockerPath));
+
+    // Create .env file from .env.example
+    $envExamplePath = $mtdockerPath . DIRECTORY_SEPARATOR . '.env.example';
+    $envPath = $mtdockerPath . DIRECTORY_SEPARATOR . '.env';
+
+    if (file_exists($envExamplePath)) {
+        $envContent = file_get_contents($envExamplePath);
+
+        // Auto-detect USER_ID and GROUP_ID
+        $uid = getmyuid();
+        $gid = getmygid();
+        $envContent = str_replace(
+                ['USER_ID=1000', 'GROUP_ID=1000'],
+                ["USER_ID=$uid", "GROUP_ID=$gid"],
+                $envContent
+        );
+
+        // Auto-detect PHP version and image
+        $phpVersion = getPhpVersion();
+        $phpImage = 'php:' . ($phpVersion === '' ? '8.3' : $phpVersion) . '-fpm-alpine';
+        $envContent = str_replace('PHP_IMAGE=php:8.3-fpm-alpine', "PHP_IMAGE=$phpImage", $envContent);
+
+        // Generate available ports
+        $envContent = generateAvailablePorts($envContent);
+
+        file_put_contents($envPath, $envContent);
     }
+
+    echo "Auto-initialized '$template' template.\n";
 }
 
 function dockerComposeCommand(): string
@@ -116,21 +116,12 @@ function dockerComposeCommand(): string
     $projectDir = getProjectDir();
     $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
     
-    if (file_exists($mtdockerPath . DIRECTORY_SEPARATOR . 'compose.yml')) {
-        return 'docker compose -f ' . $mtdockerPath . DIRECTORY_SEPARATOR . 'compose.yml --project-directory ' . $mtdockerPath . ' --project-name ' . getProjectName();
-    }
-    
-    return 'docker compose -f ' . $projectDir . DIRECTORY_SEPARATOR . 'mt-compose.yml --project-name ' . getProjectName();
+    return 'docker compose -f ' . $mtdockerPath . DIRECTORY_SEPARATOR . 'compose.yml --project-directory ' . $mtdockerPath . ' --project-name ' . getProjectName();
 }
 
 function dockerComposeUp(string $arg2): void
 {
-    $projectDir = getProjectDir();
-    $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
-    
-    if (!file_exists($mtdockerPath . DIRECTORY_SEPARATOR . 'compose.yml')) {
-        createComposeFile();
-    }
+    ensureEnvironment();
     
     $command = dockerComposeCommand() . ' up';
     $command .= $arg2 === '-d' ? ' -d' : '';
@@ -268,6 +259,7 @@ function findAvailablePortFromBase(int $basePort): int
 
 function dockerComposeDown(): void
 {
+    ensureEnvironment();
     $command = dockerComposeCommand() . ' down';
     exec($command);
 }
