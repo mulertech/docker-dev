@@ -1,0 +1,391 @@
+#!/usr/bin/env php
+<?php
+
+function getProjectDir(): string
+{
+    $projectDir = dirname(__DIR__);
+
+    while (!file_exists($projectDir . '/composer.json')) {
+        $projectDir = dirname($projectDir);
+    }
+
+    return $projectDir;
+}
+
+function getPhpVersion(): string
+{
+    $composer = file_get_contents(getProjectDir() . '/composer.json');
+    preg_match('/"php": "(.+)"/', $composer, $matches);
+    $php = $matches[1] ?? '';
+
+    if ($php === '') {
+        return '';
+    }
+
+    preg_match_all('/[\^>=~]+(\d\.\d*)/', $php, $matches);
+    return $matches[1][1] ?? $matches[1][0] ?? '';
+}
+
+function dbNeeded(): string
+{
+    $composer = file_get_contents(getProjectDir() . '/composer.json');
+    return str_contains($composer, 'ext-pdo');
+}
+
+function getContainerName(): string
+{
+    $phpVersion = getPhpVersion();
+    return 'docker-' . basename(getProjectDir()) . '-' . ($phpVersion === '' ? 'latest' : $phpVersion);
+}
+
+function getProjectName(): string
+{
+    return str_replace('.', '-', getContainerName());
+}
+
+function getDbPort(): int
+{
+    // Generate a port between 10000-65000 based on container name hash
+    $hash = md5(getContainerName());
+    return 10000 + (hexdec(substr($hash, 0, 4)) % 55000);
+}
+
+function createComposeFile(): void
+{
+    $uid = getmyuid();
+    $gid = getmygid();
+    $phpVersion = getPhpVersion();
+    $image = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'fpm-alpine';
+    $containerName = getContainerName();
+
+    $content = <<<EOF
+services:
+  php:
+    build:
+      context: .
+      dockerfile: "./vendor/mulertech/docker-dev/Dockerfile"
+      args:
+        USER_ID: $uid
+        GROUP_ID: $gid
+        PHP_IMAGE: "$image"
+    container_name: "$containerName"
+    volumes:
+      - "./:/var/www/html"
+    environment:
+      PHP_CS_FIXER_IGNORE_ENV: 1
+EOF;
+
+    if (dbNeeded()) {
+        $dbPort = getDbPort();
+        $content .= <<<EOF
+
+      DATABASE_HOST: db
+      DATABASE_PORT: "3306"
+      DATABASE_PATH: "/db"
+      DATABASE_SCHEME: "mysql"
+      DATABASE_QUERY: "serverVersion=5.7"
+      DATABASE_USER: "user"
+      DATABASE_PASS: "password"
+    links:
+      - db
+    networks:
+      - default
+  db:
+    image: "mysql:8"
+    environment:
+      MYSQL_DATABASE: db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "$dbPort:3306"
+    networks:
+      - default
+EOF;
+    }
+
+    $write = file_put_contents(getProjectDir() . DIRECTORY_SEPARATOR . 'mt-compose.yml', $content);
+
+    if ($write === false) {
+        echo 'Failed to create mt-compose.yml file';
+    }
+}
+
+function dockerComposeCommand(): string
+{
+    $projectDir = getProjectDir();
+    $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
+    
+    if (file_exists($mtdockerPath . DIRECTORY_SEPARATOR . 'compose.yml')) {
+        return 'docker compose -f ' . $mtdockerPath . DIRECTORY_SEPARATOR . 'compose.yml --project-directory ' . $mtdockerPath . ' --project-name ' . getProjectName();
+    }
+    
+    return 'docker compose -f ' . $projectDir . DIRECTORY_SEPARATOR . 'mt-compose.yml --project-name ' . getProjectName();
+}
+
+function dockerComposeUp(string $arg2): void
+{
+    $projectDir = getProjectDir();
+    $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
+    
+    if (!file_exists($mtdockerPath . DIRECTORY_SEPARATOR . 'compose.yml')) {
+        createComposeFile();
+    }
+    
+    $command = dockerComposeCommand() . ' up';
+    $command .= $arg2 === '-d' ? ' -d' : '';
+    exec($command);
+}
+
+function initTemplate(string $template): void
+{
+    // Auto-detect template if not specified
+    if (empty($template)) {
+        $template = dbNeeded() ? 'apache-mysql' : 'apache-simple';
+        echo "Auto-detected template: $template\n";
+    }
+
+    $projectDir = getProjectDir();
+    $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
+    $templatesPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $template;
+
+    if (!is_dir($templatesPath)) {
+        echo "Template '$template' not found.\n";
+        echo "Templates available: apache-simple, apache-mysql, symfony\n";
+        return;
+    }
+
+    if (is_dir($mtdockerPath)) {
+        echo ".mtdocker directory already exists. Do you want to replace it? (y/N): ";
+        $handle = fopen("php://stdin", "r");
+        $response = trim(fgets($handle));
+        fclose($handle);
+
+        if (strtolower($response) !== 'y') {
+            echo "Initialization cancelled.\n";
+            return;
+        }
+
+        exec("rm -rf " . escapeshellarg($mtdockerPath));
+    }
+
+    // Create .mtdocker directory
+    mkdir($mtdockerPath, 0755, true);
+
+    // Copy template files
+    exec("cp -r " . escapeshellarg($templatesPath) . "/* " . escapeshellarg($mtdockerPath));
+
+    // Create .env file from .env.example
+    $envExamplePath = $mtdockerPath . DIRECTORY_SEPARATOR . '.env.example';
+    $envPath = $mtdockerPath . DIRECTORY_SEPARATOR . '.env';
+
+    if (file_exists($envExamplePath)) {
+        $envContent = file_get_contents($envExamplePath);
+
+        // Auto-detect USER_ID and GROUP_ID
+        $uid = getmyuid();
+        $gid = getmygid();
+        $envContent = str_replace(
+                ['USER_ID=1000', 'GROUP_ID=1000'],
+                ["USER_ID=$uid", "GROUP_ID=$gid"],
+                $envContent
+        );
+
+        // Auto-detect PHP version and image
+        $phpVersion = getPhpVersion();
+        $phpImage = 'php:' . ($phpVersion === '' ? '8.3' : $phpVersion) . '-fpm-alpine';
+        $envContent = str_replace('PHP_IMAGE=php:8.3-fpm-alpine', "PHP_IMAGE=$phpImage", $envContent);
+
+        // Generate available ports
+        $envContent = generateAvailablePorts($envContent);
+
+        file_put_contents($envPath, $envContent);
+        echo ".env file created with your system settings.\n";
+    }
+
+    echo "Template '$template' initialized successfully in .mtdocker/\n";
+    echo "You can now use: ./vendor/bin/mtdocker up -d\n";
+}
+
+function generateAvailablePorts(string $envContent): string
+{
+    $projectName = basename(getProjectDir());
+
+    // Base ports that are always present
+    $ports = [
+            'APACHE_PORT' => generatePortFromName($projectName)
+    ];
+
+    // Add other ports only if they exist in the .env.example
+    if (str_contains($envContent, 'MYSQL_PORT=')) {
+        $ports['MYSQL_PORT'] = generatePortFromName($projectName . '-mysql');
+    }
+    if (str_contains($envContent, 'PHPMYADMIN_PORT=')) {
+        $ports['PHPMYADMIN_PORT'] = generatePortFromName($projectName . '-phpmyadmin');
+    }
+    if (str_contains($envContent, 'REDIS_PORT=')) {
+        $ports['REDIS_PORT'] = generatePortFromName($projectName . '-redis');
+    }
+    if (str_contains($envContent, 'MAILHOG_PORT=')) {
+        $ports['MAILHOG_PORT'] = generatePortFromName($projectName . '-mailhog');
+    }
+    if (str_contains($envContent, 'MAILHOG_SMTP_PORT=')) {
+        $ports['MAILHOG_SMTP_PORT'] = generatePortFromName($projectName . '-mailhog-smtp');
+    }
+
+    foreach ($ports as $varName => $port) {
+        $envContent = preg_replace("/^$varName=\d+$/m", "$varName=$port", $envContent);
+    }
+
+    return $envContent;
+}
+
+function generatePortFromName(string $name): int
+{
+    // Generate a deterministic port based on the name hash
+    $hash = md5($name);
+    // Convert first 4 hex chars to decimal and map to port range 10000-65000
+    $port = 10000 + (hexdec(substr($hash, 0, 4)) % 55000);
+
+    // Ensure the port is available, if not increment until we find one
+    return findAvailablePortFromBase($port);
+}
+
+function findAvailablePortFromBase(int $basePort): int
+{
+    // Start from the base port and find the first available one
+    for ($port = $basePort; $port < $basePort + 100; $port++) {
+        $connection = @fsockopen('127.0.0.1', $port, $errno, $errstr, 1);
+        if (!$connection) {
+            return $port;
+        }
+        fclose($connection);
+    }
+
+    // If no port is available in the range, fall back to the base port
+    return $basePort;
+}
+
+function dockerComposeDown(): void
+{
+    $command = dockerComposeCommand() . ' down';
+    exec($command);
+}
+
+function isDockerUp(): bool
+{
+    return str_contains(exec('docker compose ls | grep ' . getProjectName()), getProjectName());
+}
+
+function test(string $options = ''): void
+{
+    $containerName = getContainerName();
+    $dockerUp = isDockerUp();
+
+    if (!$dockerUp) {
+        dockerComposeUp('-d');
+    }
+
+    $cmd = 'docker exec -it ' . $containerName . ' ./vendor/bin/phpunit ' . $options;
+    $output = shell_exec($cmd);
+    echo $output;
+
+    if (!$dockerUp) {
+        dockerComposeDown();
+    }
+}
+
+function phpStan(): void
+{
+    $containerName = getContainerName();
+    $dockerUp = isDockerUp();
+
+    if (!$dockerUp) {
+        dockerComposeUp('-d');
+    }
+
+    $cmd = 'docker exec -it ' . $containerName . ' ./vendor/bin/phpstan analyse --memory-limit=1G';
+    $output = shell_exec($cmd);
+    echo $output;
+
+    if (!$dockerUp) {
+        dockerComposeDown();
+    }
+}
+
+function phpCsFixer(): void
+{
+    $containerName = getContainerName();
+    $dockerUp = isDockerUp();
+
+    if (!$dockerUp) {
+        dockerComposeUp('-d');
+    }
+
+    $cmd = 'docker exec -it ' . $containerName . ' ./vendor/bin/php-cs-fixer fix src';
+    $output = shell_exec($cmd);
+    echo $output;
+
+    if (!$dockerUp) {
+        dockerComposeDown();
+    }
+}
+
+$arg1 = $_SERVER['argv'][1] ?? '';
+$arg2 = $_SERVER['argv'][2] ?? '';
+
+if ($arg1 === 'test-coverage') {
+    test('--coverage-html ./.phpunit.cache/coverage');
+}
+
+if ($arg1 === 'test') {
+    test();
+}
+
+if ($arg1 === 'up') {
+    dockerComposeUp($arg2);
+}
+
+if ($arg1 === 'down') {
+    dockerComposeDown();
+}
+
+if ($arg1 === 'phpstan') {
+    phpStan();
+}
+
+if ($arg1 === 'cs-fixer') {
+    phpCsFixer();
+}
+
+if ($arg1 === 'all') {
+    phpCsFixer();
+    test();
+    phpStan();
+}
+
+if ($arg1 === 'ps') {
+    $containerName = getContainerName();
+    $dockerUp = isDockerUp();
+
+    if (!$dockerUp) {
+        dockerComposeUp('-d');
+    }
+
+    $cmd = dockerComposeCommand() . ' ps';
+    var_dump($cmd);
+    $output = shell_exec($cmd);
+    echo $output;
+
+    if (!$dockerUp) {
+        dockerComposeDown();
+    }
+}
+
+if ($arg1 === 'name') {
+    echo getProjectName() . PHP_EOL;
+}
+
+if ($arg1 === 'init') {
+    initTemplate($arg2);
+}

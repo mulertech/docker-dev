@@ -1,0 +1,18 @@
+{
+  "name": "mulertech/docker-dev",
+  "description": "The MulerTech Docker-dev package",
+  "minimum-stability": "stable",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Sébastien Muler",
+      "email": "sebastien.muler@mulertech.net"
+    }
+  ],
+  "require": {
+    "php": ">=8.0"
+  },
+  "bin": [
+    "mtdocker"
+  ]
+}

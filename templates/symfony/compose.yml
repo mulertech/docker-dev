@@ -1,0 +1,82 @@
+services:
+  apache:
+    build:
+      context: .
+      dockerfile: docker/apache/Dockerfile
+      args:
+        USER_ID: ${USER_ID}
+        GROUP_ID: ${GROUP_ID}
+    container_name: ${CONTAINER_NAME_APACHE}
+    ports:
+      - "${APACHE_PORT}:80"
+    volumes:
+      - ../:/var/www/html
+      - ./docker/apache/php.ini:/usr/local/etc/php/php.ini
+      - ./docker/apache/apache.conf:/etc/apache2/sites-available/000-default.conf
+    environment:
+      - DB_HOST=mysql
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - mysql
+    networks:
+      - symfony-network
+
+  mysql:
+    build:
+      context: .
+      dockerfile: docker/mysql/Dockerfile
+    container_name: ${CONTAINER_NAME_MYSQL}
+    ports:
+      - "${MYSQL_PORT}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/backups:/docker-entrypoint-initdb.d
+    networks:
+      - symfony-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: ${CONTAINER_NAME_PHPMYADMIN}
+    ports:
+      - "${PHPMYADMIN_PORT}:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: ${DB_USER}
+      PMA_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    depends_on:
+      - mysql
+    networks:
+      - symfony-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: ${CONTAINER_NAME_REDIS}
+    ports:
+      - "${REDIS_PORT}:6379"
+    networks:
+      - symfony-network
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: ${CONTAINER_NAME_MAILHOG}
+    ports:
+      - "${MAILHOG_PORT}:8025"
+      - "${MAILHOG_SMTP_PORT}:1025"
+    networks:
+      - symfony-network
+
+volumes:
+  mysql-data:
+
+networks:
+  symfony-network:
+    driver: bridge
