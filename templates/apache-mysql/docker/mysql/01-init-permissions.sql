@@ -1,0 +1,2 @@
+-- This file will be replaced by a script-generated version
+-- See init.sh for the actual user creation logic

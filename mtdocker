@@ -129,14 +129,18 @@ function autoInitTemplate(): void
 
         // Auto-detect PHP version and image
         $phpVersion = getPhpVersion();
-        $phpImage = 'php:' . ($phpVersion === '' ? '8.3' : $phpVersion) . '-fmp-alpine';
-        $envContent = str_replace('PHP_IMAGE=php:8.3-fmp-alpine', "PHP_IMAGE=$phpImage", $envContent);
+        $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'fpm-alpine';
+        $envContent = str_replace('PHP_IMAGE=php:fpm-alpine', "PHP_IMAGE=$phpImage", $envContent);
 
         // Generate container names based on project
         $apacheContainerName = getContainerName(); // docker-database-8-4
         $projectBaseName = getProjectBaseName(); // database
         $envContent = str_replace('CONTAINER_NAME_APACHE=apache-php', "CONTAINER_NAME_APACHE=$apacheContainerName", $envContent);
         $envContent = str_replace('CONTAINER_NAME_MYSQL=mysql-db', "CONTAINER_NAME_MYSQL=$projectBaseName-mysql", $envContent);
+        // Symfony template additional containers
+        $envContent = str_replace('CONTAINER_NAME_PHPMYADMIN=symfony-phpmyadmin', "CONTAINER_NAME_PHPMYADMIN=$projectBaseName-phpmyadmin", $envContent);
+        $envContent = str_replace('CONTAINER_NAME_REDIS=symfony-redis', "CONTAINER_NAME_REDIS=$projectBaseName-redis", $envContent);
+        $envContent = str_replace('CONTAINER_NAME_MAILHOG=symfony-mailhog', "CONTAINER_NAME_MAILHOG=$projectBaseName-mailhog", $envContent);
 
         // Generate available ports
         $envContent = generateAvailablePorts($envContent);
@@ -221,8 +225,8 @@ function initTemplate(string $template): void
 
         // Auto-detect PHP version and image
         $phpVersion = getPhpVersion();
-        $phpImage = 'php:' . ($phpVersion === '' ? '8.3' : $phpVersion) . '-fpm-alpine';
-        $envContent = str_replace('PHP_IMAGE=php:8.3-fpm-alpine', "PHP_IMAGE=$phpImage", $envContent);
+        $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . '-fpm-alpine';
+        $envContent = str_replace('PHP_IMAGE=php:fpm-alpine', "PHP_IMAGE=$phpImage", $envContent);
 
         // Generate available ports
         $envContent = generateAvailablePorts($envContent);

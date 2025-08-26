@@ -27,20 +27,17 @@ services:
       - default
 
   mysql:
-    build:
-      context: .
-      dockerfile: docker/mysql/Dockerfile
+    image: "mysql:8"
     container_name: ${CONTAINER_NAME_MYSQL}
     ports:
       - "${MYSQL_PORT}:3306"
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+    command: --default-authentication-plugin=mysql_native_password
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./docker/mysql/backups:/docker-entrypoint-initdb.d
+      - ./init-user.sql:/docker-entrypoint-initdb.d/init-user.sql
     networks:
       - default
 

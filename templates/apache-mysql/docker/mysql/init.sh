@@ -5,6 +5,17 @@
 
 echo "Initializing MySQL database..."
 
+# Create SQL script for user permissions
+echo "Creating network user permissions..."
+cat > /docker-entrypoint-initdb.d/02-user-permissions.sql << EOF
+-- Grant network access for the application user
+CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
+GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%';
+FLUSH PRIVILEGES;
+EOF
+
+echo "User permissions script created."
+
 # If backup files exist in the backups/ folder
 if [ "$(ls -A /docker-entrypoint-initdb.d/*.sql 2>/dev/null)" ]; then
     echo "Backup files detected, importing..."
