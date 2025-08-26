@@ -34,10 +34,11 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
-    command: --default-authentication-plugin=mysql_native_password
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./init-user.sql:/docker-entrypoint-initdb.d/init-user.sql
+      - ./init-user.sql:/docker-entrypoint-initdb.d/01-init-user.sql
+      - ./sql:/docker-entrypoint-initdb.d/user-sql
     networks:
       - default
 

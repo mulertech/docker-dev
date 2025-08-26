@@ -72,6 +72,27 @@ function getProjectBaseName(): string
     return basename(getProjectDir());
 }
 
+function addToGitignore(string $projectDir): void
+{
+    $gitignorePath = $projectDir . '/.gitignore';
+    
+    if (file_exists($gitignorePath)) {
+        $gitignoreContent = file_get_contents($gitignorePath);
+        
+        // Check if .mtdocker is already ignored
+        if (!str_contains($gitignoreContent, '.mtdocker')) {
+            $addition = "\n# Docker development environment\n.mtdocker/\n";
+            file_put_contents($gitignorePath, $addition, FILE_APPEND);
+            echo "Added .mtdocker/ to .gitignore\n";
+        }
+    } else {
+        // Create .gitignore with .mtdocker entry
+        $content = "# Docker development environment\n.mtdocker/\n";
+        file_put_contents($gitignorePath, $content);
+        echo "Created .gitignore with .mtdocker/ entry\n";
+    }
+}
+
 function getDbPort(): int
 {
     // Generate a port between 10000-65000 based on container name hash
@@ -148,6 +169,9 @@ function autoInitTemplate(): void
         file_put_contents($envPath, $envContent);
     }
 
+    // Add .mtdocker to .gitignore if .gitignore exists
+    addToGitignore($projectDir);
+    
     echo "Auto-initialized '$template' template.\n";
 }
 
@@ -235,6 +259,9 @@ function initTemplate(string $template): void
         echo ".env file created with your system settings.\n";
     }
 
+    // Add .mtdocker to .gitignore if .gitignore exists
+    addToGitignore($projectDir);
+    
     echo "Template '$template' initialized successfully in .mtdocker/\n";
     echo "You can now use: ./vendor/bin/mtdocker up -d\n";
 }

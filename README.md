@@ -172,7 +172,27 @@ This command will output the project name that should be used in the `COMPOSE_PR
 - Copies all necessary Docker configuration files
 - Creates a `.env` file with auto-detected system settings (USER_ID, GROUP_ID, PHP version)
 - Generates deterministic ports based on project name to avoid conflicts
+- **Automatically adds `.mtdocker/` to `.gitignore`** (best practice)
 - Provides a complete development environment ready to use
+
+### Database Initialization
+
+For templates with MySQL (`apache-mysql` and `symfony`), you can easily initialize your database with custom SQL files:
+
+```sh
+# 1. Copy your SQL files to the sql directory
+cp my-backup.sql .mtdocker/sql/02-my-data.sql
+cp schema.sql .mtdocker/sql/01-schema.sql
+
+# 2. Restart the environment to apply changes
+./vendor/bin/mtdocker down
+./vendor/bin/mtdocker up -d
+```
+
+**File execution order:**
+- `01-init-user.sql` (system - creates user with network permissions)
+- Your SQL files in alphabetical order (e.g., `01-schema.sql`, `02-data.sql`)
+- Supports `.sql`, `.sql.gz`, and `.sh` files
 
 ## IDE Integration
 
@@ -217,3 +237,13 @@ Configure PHPStorm to work with your Docker development environment:
 - Database services included when needed
 - Unique container names and ports per project
 - No manual configuration required
+
+**Container Naming:**
+- **Apache containers**: `docker-<project-name>-<php-version>` (e.g., `docker-myapp-8-4`)
+- **Other services**: `<project-name>-<service>` (e.g., `myapp-mysql`, `myapp-redis`)
+- **Project name**: Used for Docker Compose isolation between projects
+
+**Automatic Git Integration:**
+- `.mtdocker/` directory is automatically added to `.gitignore`
+- Each developer gets their own local environment configuration
+- No conflicts between team members' development setups
