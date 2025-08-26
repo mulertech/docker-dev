@@ -157,9 +157,10 @@ This command will output the project name that should be used in the `COMPOSE_PR
 
 ### Available Templates
 
-**Template auto-detection:**
-- If `composer.json` contains `ext-pdo` → `apache-mysql` template
-- If no `ext-pdo` found → `apache-simple` template
+**Smart template auto-detection:**
+1. **Symfony projects** → `symfony` template (detects `symfony/framework-bundle`, `symfony/symfony`, or `symfony/kernel`)
+2. **Database projects** → `apache-mysql` template (detects `ext-pdo` requirement) 
+3. **Simple projects** → `apache-simple` template (fallback)
 
 **Available templates:**
 - `apache-simple`: Basic Apache + PHP environment for simple web projects
@@ -197,10 +198,13 @@ Configure PHPStorm to work with your Docker development environment:
 
 ## How It Works
 
-**Automatic Environment Setup:**
+**Intelligent Environment Setup:**
 - When you run any command, the system automatically detects if a development environment exists
-- If no `.mtdocker/` directory is found, it auto-initializes the appropriate template
-- Templates are chosen based on your `composer.json` dependencies (MySQL if `ext-pdo` is present)
+- If no `.mtdocker/` directory is found, it auto-initializes the most appropriate template
+- Smart detection analyzes your `composer.json` to choose the perfect environment:
+  - **Symfony projects**: Full Symfony stack with Apache, MySQL, PhpMyAdmin, Redis, MailHog
+  - **Database projects**: Apache + PHP + MySQL when `ext-pdo` is detected
+  - **Simple projects**: Basic Apache + PHP environment
 
 **Template Features:**
 - Pre-configured Docker environments for different project types

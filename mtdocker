@@ -26,10 +26,34 @@ function getPhpVersion(): string
     return $matches[1][1] ?? $matches[1][0] ?? '';
 }
 
-function dbNeeded(): string
+function dbNeeded(): bool
 {
     $composer = file_get_contents(getProjectDir() . '/composer.json');
     return str_contains($composer, 'ext-pdo');
+}
+
+function isSymfonyProject(): bool
+{
+    $composer = file_get_contents(getProjectDir() . '/composer.json');
+    return str_contains($composer, 'symfony/framework-bundle') 
+        || str_contains($composer, 'symfony/symfony')
+        || str_contains($composer, 'symfony/kernel');
+}
+
+function detectTemplate(): string
+{
+    // Priority 1: Symfony framework
+    if (isSymfonyProject()) {
+        return 'symfony';
+    }
+    
+    // Priority 2: Database needed
+    if (dbNeeded()) {
+        return 'apache-mysql';
+    }
+    
+    // Priority 3: Simple Apache + PHP
+    return 'apache-simple';
 }
 
 function getContainerName(): string
@@ -64,7 +88,7 @@ function ensureEnvironment(): void
 function autoInitTemplate(): void
 {
     // Auto-detect template based on project
-    $template = dbNeeded() ? 'apache-mysql' : 'apache-simple';
+    $template = detectTemplate();
     
     $projectDir = getProjectDir();
     $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
@@ -132,7 +156,7 @@ function initTemplate(string $template): void
 {
     // Auto-detect template if not specified
     if (empty($template)) {
-        $template = dbNeeded() ? 'apache-mysql' : 'apache-simple';
+        $template = detectTemplate();
         echo "Auto-detected template: $template\n";
     }
 
