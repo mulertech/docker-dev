@@ -412,8 +412,7 @@ function symfony(): void
     $consoleCommand = implode(' ', array_map('escapeshellarg', $consoleArgs));
     
     $cmd = 'docker exec -it ' . $containerName . ' php bin/console ' . $consoleCommand;
-    $output = shell_exec($cmd);
-    echo $output;
+    passthru($cmd);
 
     if (!$dockerUp) {
         dockerComposeDown();
