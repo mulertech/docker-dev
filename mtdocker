@@ -391,6 +391,35 @@ function phpCsFixer(): void
     }
 }
 
+function symfony(): void
+{
+    global $argv;
+    
+    if (!isSymfonyProject()) {
+        echo "Error: This command is only available for Symfony projects.\n";
+        return;
+    }
+
+    $containerName = getContainerName();
+    $dockerUp = isDockerUp();
+
+    if (!$dockerUp) {
+        dockerComposeUp('-d');
+    }
+
+    // Get command arguments starting from index 2 (after 'symfony')
+    $consoleArgs = array_slice($argv, 2);
+    $consoleCommand = implode(' ', array_map('escapeshellarg', $consoleArgs));
+    
+    $cmd = 'docker exec -it ' . $containerName . ' php bin/console ' . $consoleCommand;
+    $output = shell_exec($cmd);
+    echo $output;
+
+    if (!$dockerUp) {
+        dockerComposeDown();
+    }
+}
+
 $arg1 = $_SERVER['argv'][1] ?? '';
 $arg2 = $_SERVER['argv'][2] ?? '';
 
@@ -448,4 +477,8 @@ if ($arg1 === 'name') {
 
 if ($arg1 === 'init') {
     initTemplate($arg2);
+}
+
+if ($arg1 === 'symfony') {
+    symfony();
 }

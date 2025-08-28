@@ -129,6 +129,31 @@ This command will:
 - Run php-cs-fixer in the container.
 - Stop the container if it was not running before php-cs-fixer was executed.
 
+### Symfony Console Commands (Symfony projects only)
+
+For Symfony projects, you can run console commands directly in the container:
+
+```sh
+# Create a new entity
+./vendor/bin/mtdocker symfony make:entity MyEntity
+
+# Run database migrations
+./vendor/bin/mtdocker symfony doctrine:migrations:migrate
+
+# Clear cache
+./vendor/bin/mtdocker symfony cache:clear
+
+# Any other Symfony console command
+./vendor/bin/mtdocker symfony [command] [arguments...]
+```
+
+This command will:
+- Check that your project is a Symfony project.
+- Check if the Docker container is running.
+- If the container is not running, it will be started.
+- Run `php bin/console [command]` in the container with all provided arguments.
+- Stop the container if it was not running before the command was executed.
+
 ### Running php-cs-fixer, phpunit and phpstan
 
 To run php-cs-fixer, phpunit and phpstan, use the following command:
