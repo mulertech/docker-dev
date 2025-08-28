@@ -183,6 +183,27 @@ function dockerComposeCommand(): string
     return 'docker compose -f ' . $mtdockerPath . DIRECTORY_SEPARATOR . 'compose.yml --project-directory ' . $mtdockerPath . ' --project-name ' . getProjectName();
 }
 
+function getApachePort(): int
+{
+    $projectDir = getProjectDir();
+    $envPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker' . DIRECTORY_SEPARATOR . '.env';
+    
+    if (file_exists($envPath)) {
+        $envContent = file_get_contents($envPath);
+        if (preg_match('/APACHE_PORT=(\d+)/', $envContent, $matches)) {
+            return (int)$matches[1];
+        }
+    }
+    
+    return 8080; // fallback
+}
+
+function displayApacheLink(): void
+{
+    $port = getApachePort();
+    echo "\n🚀 Apache server is running at: \033]8;;http://localhost:$port\033\\http://localhost:$port\033]8;;\033\\\n\n";
+}
+
 function dockerComposeUp(string $arg2): void
 {
     ensureEnvironment();
@@ -190,6 +211,10 @@ function dockerComposeUp(string $arg2): void
     $command = dockerComposeCommand() . ' up';
     $command .= $arg2 === '-d' ? ' -d' : '';
     exec($command);
+    
+    if ($arg2 === '-d') {
+        displayApacheLink();
+    }
 }
 
 function initTemplate(string $template): void
