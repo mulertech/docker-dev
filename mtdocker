@@ -293,7 +293,35 @@ function generateAvailablePorts(string $envContent): string
     }
 
     foreach ($ports as $varName => $port) {
+        // Replace port values
         $envContent = preg_replace("/^$varName=\d+$/m", "$varName=$port", $envContent);
+        
+        // Update comments with actual generated ports
+        if ($varName === 'APACHE_PORT') {
+            $envContent = preg_replace(
+                '/# Port to access Apache web server \(ex: [^)]+\)/',
+                "# Port to access Apache web server (http://localhost:$port)",
+                $envContent
+            );
+        } elseif ($varName === 'MYSQL_PORT') {
+            $envContent = preg_replace(
+                '/# Port to access MySQL directly \(ex: [^)]+\)/',
+                "# Port to access MySQL directly (localhost:$port)",
+                $envContent
+            );
+        } elseif ($varName === 'PHPMYADMIN_PORT') {
+            $envContent = preg_replace(
+                '/# Port to access PhpMyAdmin \(ex: [^)]+\)/',
+                "# Port to access PhpMyAdmin (http://localhost:$port)",
+                $envContent
+            );
+        } elseif ($varName === 'MAILHOG_PORT') {
+            $envContent = preg_replace(
+                '/# Port for MailHog web interface \(ex: [^)]+\)/',
+                "# Port for MailHog web interface (http://localhost:$port)",
+                $envContent
+            );
+        }
     }
 
     return $envContent;
