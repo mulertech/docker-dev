@@ -210,10 +210,62 @@ function dockerComposeUp(string $arg2): void
     
     $command = dockerComposeCommand() . ' up';
     $command .= $arg2 === '-d' ? ' -d' : '';
-    exec($command);
     
     if ($arg2 === '-d') {
-        displayApacheLink();
+        echo "🚀 Démarrage des containers Docker...\n";
+        
+        // Utiliser popen pour afficher la progression en temps réel
+        $process = popen($command . ' 2>&1', 'r');
+        
+        if ($process) {
+            $progressChars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+            $step = 0;
+            $containerMessages = [];
+            
+            echo "Progression: ";
+            
+            while (!feof($process)) {
+                $line = fgets($process);
+                if ($line !== false) {
+                    // Afficher un spinner animé à la bonne position
+                    echo "\rProgression: " . $progressChars[$step % count($progressChars)];
+                    $step++;
+                    usleep(50000); // 0.05 seconde pour plus de fluidité
+                    
+                    // Détecter les messages importants de containers (pas les téléchargements)
+                    if (preg_match('/Container .* (Created|Started)|Network .* Created/', $line)) {
+                        $containerMessages[] = trim($line);
+                        echo "\n✅ " . trim($line) . "\n";
+                        echo "Progression: ";
+                    }
+                    
+                    // Détecter les messages de téléchargement pour les stocker seulement
+                    if (preg_match('/download|Starting to/', $line)) {
+                        $containerMessages[] = trim($line);
+                    }
+                }
+            }
+            
+            $exitCode = pclose($process);
+            
+            if ($exitCode === 0) {
+                echo "\n✅ Tous les containers sont démarrés avec succès!\n";
+                displayApacheLink();
+            } else {
+                echo "\n❌ Erreur lors du démarrage des containers (code: $exitCode)\n";
+                echo "Messages détaillés:\n";
+                foreach ($containerMessages as $msg) {
+                    echo "  $msg\n";
+                }
+            }
+        } else {
+            // Fallback vers l'ancienne méthode
+            exec($command);
+            displayApacheLink();
+        }
+    } else {
+        // Pour le mode non-detached, utiliser passthru pour afficher la sortie
+        passthru($command);
     }
 }
 
