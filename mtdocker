@@ -150,18 +150,36 @@ function autoInitTemplate(): void
 
         // Auto-detect PHP version and image
         $phpVersion = getPhpVersion();
-        $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'fpm-alpine';
-        $envContent = str_replace('PHP_IMAGE=php:fpm-alpine', "PHP_IMAGE=$phpImage", $envContent);
+        // Use different image base depending on template type
+        if (isSymfonyProject() && $template === 'symfony') {
+            $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'apache';
+            $envContent = str_replace('PHP_IMAGE=php:apache', "PHP_IMAGE=$phpImage", $envContent);
+        } else {
+            $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'fpm-alpine';
+            $envContent = str_replace('PHP_IMAGE=php:fpm-alpine', "PHP_IMAGE=$phpImage", $envContent);
+        }
 
         // Generate container names based on project
         $apacheContainerName = getContainerName(); // docker-database-8-4
         $projectBaseName = getProjectBaseName(); // database
-        $envContent = str_replace('CONTAINER_NAME_APACHE=apache-php', "CONTAINER_NAME_APACHE=$apacheContainerName", $envContent);
-        $envContent = str_replace('CONTAINER_NAME_MYSQL=mysql-db', "CONTAINER_NAME_MYSQL=$projectBaseName-mysql", $envContent);
         // Symfony template additional containers
-        $envContent = str_replace('CONTAINER_NAME_PHPMYADMIN=symfony-phpmyadmin', "CONTAINER_NAME_PHPMYADMIN=$projectBaseName-phpmyadmin", $envContent);
-        $envContent = str_replace('CONTAINER_NAME_REDIS=symfony-redis', "CONTAINER_NAME_REDIS=$projectBaseName-redis", $envContent);
-        $envContent = str_replace('CONTAINER_NAME_MAILHOG=symfony-mailhog', "CONTAINER_NAME_MAILHOG=$projectBaseName-mailhog", $envContent);
+        $envContent = str_replace(
+            [
+                'CONTAINER_NAME_APACHE=apache-php',
+                'CONTAINER_NAME_MYSQL=mysql-db',
+                'CONTAINER_NAME_PHPMYADMIN=symfony-phpmyadmin',
+                'CONTAINER_NAME_REDIS=symfony-redis',
+                'CONTAINER_NAME_MAILHOG=symfony-mailhog'
+            ],
+            [
+                "CONTAINER_NAME_APACHE=$apacheContainerName",
+                "CONTAINER_NAME_MYSQL=$projectBaseName-mysql",
+                "CONTAINER_NAME_PHPMYADMIN=$projectBaseName-phpmyadmin",
+                "CONTAINER_NAME_REDIS=$projectBaseName-redis",
+                "CONTAINER_NAME_MAILHOG=$projectBaseName-mailhog"
+            ],
+            $envContent
+        );
 
         // Generate available ports
         $envContent = generateAvailablePorts($envContent);
@@ -289,8 +307,14 @@ function initTemplate(string $template): void
 
         // Auto-detect PHP version and image
         $phpVersion = getPhpVersion();
-        $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . '-fpm-alpine';
-        $envContent = str_replace('PHP_IMAGE=php:fpm-alpine', "PHP_IMAGE=$phpImage", $envContent);
+        // Use different image base depending on template type
+        if ($template === 'symfony') {
+            $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'apache';
+            $envContent = str_replace('PHP_IMAGE=php:apache', "PHP_IMAGE=$phpImage", $envContent);
+        } else {
+            $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'fpm-alpine';
+            $envContent = str_replace('PHP_IMAGE=php:fpm-alpine', "PHP_IMAGE=$phpImage", $envContent);
+        }
 
         // Generate available ports
         $envContent = generateAvailablePorts($envContent);
