@@ -240,6 +240,7 @@ Configure PHPStorm to work with your Docker development environment:
 2. Add `PHPUnit by Remote Interpreter`
 3. Select your Docker interpreter
 4. Path to script: `/var/www/html/vendor/autoload.php`
+5. Default configuration file: `/var/www/html/phpunit.xml.dist` (needed for Symfony projects)
 
 ## How It Works
 
