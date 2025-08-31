@@ -1,0 +1,36 @@
+# Ignore unnecessary files to speed up build (Symfony + Tailwind + UX)
+.git
+.gitignore
+README.md
+.env.local
+.env.test
+.env.*.local
+
+# Symfony cache (will be regenerated in container)
+var/cache/*
+var/log/*
+var/sessions/*
+
+# Temporary Node.js files (Tailwind/UX will be compiled in container)
+node_modules/.cache
+.npm
+.node_repl_history
+
+# Temporary build artifacts
+public/build/.htaccess
+
+# Docker files
+.docker
+.mtdocker
+Dockerfile*
+docker-compose*.yml
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

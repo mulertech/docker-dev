@@ -3,76 +3,93 @@ FROM php:apache
 ARG USER_ID
 ARG GROUP_ID
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Use buildkit cache + multi-stage to optimize downloads
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt \
+    apt-get update && apt-get install -y \
+    # Core PHP dependencies
     libicu-dev \
     libxml2-dev \
     libzip-dev \
+    libonig-dev \
+    # Image processing (GD + imagick for all project types)
     libpng-dev \
     libjpeg62-turbo-dev \
     libfreetype6-dev \
-    libonig-dev \
-    libxslt1-dev \
-    libssl-dev \
-    libcurl4-openssl-dev \
     libwebp-dev \
     libavif-dev \
+    # Advanced features (optional but available)
+    libxslt1-dev \
     librabbitmq-dev \
     libmemcached-dev \
+    libssl-dev \
+    # Build tools
     zlib1g-dev \
     unzip \
     git \
     curl \
-    vim \
-    nano \
-    wget \
-    htop \
     && rm -rf /var/lib/apt/lists/*
 
-# Configure GD with modern format support
+# Configure GD with modern support (WebP, AVIF)
 RUN docker-php-ext-configure gd \
     --with-freetype \
     --with-jpeg \
     --with-webp \
     --with-avif
 
-# Install PHP extensions
-RUN docker-php-ext-install \
+# Install PHP extensions in parallel for speed
+RUN docker-php-ext-install -j$(nproc) \
+    # Core Symfony requirements
     intl \
     pdo \
     pdo_mysql \
     mysqli \
     zip \
+    # Image processing
     gd \
+    exif \
+    # XML/API support
     xml \
     soap \
+    # Math/String processing
     bcmath \
     mbstring \
-    xsl \
-    curl \
+    # Performance
     opcache \
-    exif \
+    # Utility
     calendar \
     sockets
 
-# Install PECL extensions
-RUN pecl install \
+# Install PECL extensions (separately for cache)
+RUN --mount=type=cache,target=/tmp/pear \
+    pecl install \
     redis \
     xdebug \
-    amqp \
-    memcached \
-    && docker-php-ext-enable redis xdebug amqp memcached
+    apcu \
+    && docker-php-ext-enable redis xdebug apcu
 
-# Install Composer
+# Install advanced PECL extensions if needed (optional)
+RUN --mount=type=cache,target=/tmp/pear \
+    pecl install amqp memcached || true \
+    && docker-php-ext-enable amqp memcached || true
+
+# Install Composer (faster with multi-stage)
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install Symfony CLI
-RUN curl -sS https://get.symfony.com/cli/installer | bash \
-    && mv /root/.symfony*/bin/symfony /usr/local/bin/symfony
-
-# Install Node.js and npm (for Webpack Encore)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+# Install Node.js 20 LTS (required for Tailwind CSS + Symfony UX + AssetMapper)
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs
+
+# Install Yarn (alternative to npm, often faster)
+RUN --mount=type=cache,target=/tmp \
+    corepack enable || npm install -g yarn
+
+# Install Symfony CLI (useful for debug + UX commands)
+RUN --mount=type=cache,target=/tmp \
+    curl -sS https://get.symfony.com/cli/installer | bash \
+    && mv /root/.symfony*/bin/symfony /usr/local/bin/symfony
 
 # Configure Apache
 RUN a2enmod rewrite headers ssl deflate expires

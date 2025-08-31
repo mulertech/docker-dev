@@ -6,6 +6,7 @@ services:
       args:
         USER_ID: ${USER_ID}
         GROUP_ID: ${GROUP_ID}
+        BUILDKIT_INLINE_CACHE: 1
     container_name: ${CONTAINER_NAME_APACHE}
     ports:
       - "${APACHE_PORT}:80"
