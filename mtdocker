@@ -150,14 +150,9 @@ function autoInitTemplate(): void
 
         // Auto-detect PHP version and image
         $phpVersion = getPhpVersion();
-        // Use different image base depending on template type
-        if (isSymfonyProject() && $template === 'symfony') {
-            $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'apache';
-            $envContent = str_replace('PHP_IMAGE=php:apache', "PHP_IMAGE=$phpImage", $envContent);
-        } else {
-            $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'fpm-alpine';
-            $envContent = str_replace('PHP_IMAGE=php:fpm-alpine', "PHP_IMAGE=$phpImage", $envContent);
-        }
+        // All templates now use php:apache
+        $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'apache';
+        $envContent = str_replace('PHP_IMAGE=php:apache', "PHP_IMAGE=$phpImage", $envContent);
 
         // Generate container names based on project
         $apacheContainerName = getContainerName(); // docker-database-8-4
@@ -307,14 +302,9 @@ function initTemplate(string $template): void
 
         // Auto-detect PHP version and image
         $phpVersion = getPhpVersion();
-        // Use different image base depending on template type
-        if ($template === 'symfony') {
-            $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'apache';
-            $envContent = str_replace('PHP_IMAGE=php:apache', "PHP_IMAGE=$phpImage", $envContent);
-        } else {
-            $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'fpm-alpine';
-            $envContent = str_replace('PHP_IMAGE=php:fpm-alpine', "PHP_IMAGE=$phpImage", $envContent);
-        }
+        // All templates now use php:apache
+        $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'apache';
+        $envContent = str_replace('PHP_IMAGE=php:apache', "PHP_IMAGE=$phpImage", $envContent);
 
         // Generate available ports
         $envContent = generateAvailablePorts($envContent);

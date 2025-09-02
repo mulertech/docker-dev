@@ -2,11 +2,11 @@ services:
   apache:
     build:
       context: .
-      dockerfile: "../vendor/mulertech/docker-dev/Dockerfile"
+      dockerfile: php/Dockerfile
       args:
         USER_ID: ${USER_ID}
         GROUP_ID: ${GROUP_ID}
-        PHP_IMAGE: "${PHP_IMAGE}"
+        PHP_IMAGE: ${PHP_IMAGE}
     container_name: ${CONTAINER_NAME_APACHE}
     ports:
       - "${APACHE_PORT}:80"
