@@ -29,7 +29,7 @@ download_file ".env.example" ".env.example"
 
 # Create .env from .env.example with auto-detected values
 if [ -f ".env.example" ]; then
-    cp ".env.example" ".env"
+    mv ".env.example" ".env"
     
     # Auto-detect USER_ID and GROUP_ID
     USER_ID=$(id -u)
@@ -51,9 +51,6 @@ if [ -f ".env.example" ]; then
     echo "✅ Environment configured:"
     echo "   - Container: $CONTAINER_NAME"
     echo "   - Port: $PORT"
-
-    # Clean up .env.example
-    rm ".env.example"
 fi
 
 # Create a simple index.html if it doesn't exist
