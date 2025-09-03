@@ -46,6 +46,7 @@ if [ -f ".env.example" ]; then
     
     sed -i "s/CONTAINER_NAME_APACHE=apache-html/CONTAINER_NAME_APACHE=$CONTAINER_NAME/g" ".env"
     sed -i "s/APACHE_PORT=8080/APACHE_PORT=$PORT/g" ".env"
+    sed -i "s|(ex: http://localhost:8080)|http://localhost:$PORT|g" ".env"
     
     echo "✅ Environment configured:"
     echo "   - Container: $CONTAINER_NAME"
