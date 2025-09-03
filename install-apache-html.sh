@@ -51,6 +51,9 @@ if [ -f ".env.example" ]; then
     echo "✅ Environment configured:"
     echo "   - Container: $CONTAINER_NAME"
     echo "   - Port: $PORT"
+
+    # Clean up .env.example
+    rm ".env.example"
 fi
 
 # Create a simple index.html if it doesn't exist
