@@ -2,7 +2,7 @@
 
 set -e
 
-PROJECT_NAME=${1:-$(basename "$(pwd)")}
+PROJECT_NAME=$(basename "$(pwd)")
 TEMPLATE_URL="https://api.github.com/repos/mulertech/docker-dev/contents/templates/apache-html"
 
 echo "🚀 Installing Apache HTML Docker environment..."
@@ -21,10 +21,6 @@ download_file() {
         | cut -d '"' -f 4 \
         | xargs curl -s -o "$output_path"
 }
-
-# Create project directory if it doesn't exist
-mkdir -p "$PROJECT_NAME"
-cd "$PROJECT_NAME"
 
 # Download template files
 download_file "Dockerfile" "Dockerfile"
@@ -119,7 +115,6 @@ echo ""
 echo "🎉 Apache HTML environment installed successfully!"
 echo ""
 echo "📋 Next steps:"
-echo "   cd $PROJECT_NAME"
 echo "   docker compose up -d"
 echo ""
 echo "🌐 Your server will be available at: http://localhost:$PORT"

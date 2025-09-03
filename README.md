@@ -46,18 +46,14 @@ Since this template doesn't use PHP or Composer, you have two options:
 #### Option 1: Quick Setup with Install Script (Recommended)
 
 ```sh
-# Download and run the installation script (it creates a new directory named 'your-project-name')
-curl -sSL https://raw.githubusercontent.com/mulertech/docker-dev/main/install-apache-html.sh | bash -s your-project-name
-
-# Or create in current directory
+# Download and run the installation script in the project directory
 curl -sSL https://raw.githubusercontent.com/mulertech/docker-dev/main/install-apache-html.sh | bash
 ```
 
 This script will:
-- Create the project directory (if specified)
 - Download all necessary Docker files
 - Auto-configure environment variables (USER_ID, GROUP_ID, unique ports)
-- Create a sample `index.html` file
+- Create a sample `index.html` file (if none exists)
 - Provide ready-to-use Docker environment
 
 #### Option 2: Manual Setup
