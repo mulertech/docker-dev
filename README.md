@@ -15,11 +15,17 @@ This package simplifies web development by providing pre-configured Docker envir
 
 ## Prerequisites
 
+### For PHP Projects
 - Docker
 - PHP
 - Composer
 
+### For Static HTML/CSS/JS Projects
+- Docker only
+
 ## Installation
+
+### For PHP Projects (Symfony, Apache-MySQL, Apache-Simple)
 
 1. Include the package as a dev dependency with Composer :
 
@@ -32,6 +38,39 @@ This package simplifies web development by providing pre-configured Docker envir
     ```sh
     composer install
     ```
+
+### For Static HTML/CSS/JS Projects (Apache-HTML)
+
+Since this template doesn't use PHP or Composer, you have two options:
+
+#### Option 1: Quick Setup with Install Script (Recommended)
+
+```sh
+# Download and run the installation script (it creates a new directory named 'your-project-name')
+curl -sSL https://raw.githubusercontent.com/mulertech/docker-dev/main/install-apache-html.sh | bash -s your-project-name
+
+# Or create in current directory
+curl -sSL https://raw.githubusercontent.com/mulertech/docker-dev/main/install-apache-html.sh | bash
+```
+
+This script will:
+- Create the project directory (if specified)
+- Download all necessary Docker files
+- Auto-configure environment variables (USER_ID, GROUP_ID, unique ports)
+- Create a sample `index.html` file
+- Provide ready-to-use Docker environment
+
+#### Option 2: Manual Setup
+
+1. Download the apache-html template files from [GitHub](https://github.com/mulertech/docker-dev/tree/main/templates/apache-html)
+2. Copy the files to your project root:
+   - `Dockerfile`
+   - `compose.yml` 
+   - `.env.example` (rename to `.env`)
+3. Run the Docker environment:
+   ```sh
+   docker-compose up -d
+   ```
 
 ## Usage
 
@@ -47,6 +86,7 @@ The primary feature of this package is to quickly set up complete development en
 ./vendor/bin/mtdocker init symfony
 ./vendor/bin/mtdocker init apache-mysql  
 ./vendor/bin/mtdocker init apache-simple
+./vendor/bin/mtdocker init apache-html
 ```
 
 This creates a complete development environment with web server, database (if needed), and all necessary services ready to use.
@@ -189,7 +229,8 @@ This command will output the project name that should be used in the `COMPOSE_PR
 
 **Available templates:**
 - `apache-simple`: Basic Apache + PHP environment for simple web projects
-- `apache-mysql`: Apache + PHP + MySQL environment for database-driven applications  
+- `apache-mysql`: Apache + PHP + MySQL environment for database-driven applications
+- `apache-html`: Pure Apache HTTP server for static HTML/CSS/JS projects (no PHP) - [Download template files](https://github.com/mulertech/docker-dev/tree/main/templates/apache-html)
 - `symfony`: Complete Symfony development environment with Apache, MySQL, PhpMyAdmin, Redis, and MailHog
 
 **Template initialization process:**
