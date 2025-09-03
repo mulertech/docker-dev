@@ -29,7 +29,7 @@ download_file ".env.example" ".env.example"
 
 # Create .env from .env.example with auto-detected values
 if [ -f ".env.example" ]; then
-    mv ".env.example" ".env"
+    cp ".env.example" ".env"
     
     # Auto-detect USER_ID and GROUP_ID
     USER_ID=$(id -u)
@@ -47,6 +47,9 @@ if [ -f ".env.example" ]; then
     sed -i "s/CONTAINER_NAME_APACHE=apache-html/CONTAINER_NAME_APACHE=$CONTAINER_NAME/g" ".env"
     sed -i "s/APACHE_PORT=8080/APACHE_PORT=$PORT/g" ".env"
     sed -i "s|(ex: http://localhost:8080)|http://localhost:$PORT|g" ".env"
+    
+    # Remove .env.example after successful configuration
+    rm ".env.example"
     
     echo "✅ Environment configured:"
     echo "   - Container: $CONTAINER_NAME"
