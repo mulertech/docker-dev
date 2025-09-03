@@ -9,9 +9,11 @@ RUN deluser www-data 2>/dev/null || true \
     && addgroup -g ${GROUP_ID} -S www-data \
     && adduser -u ${USER_ID} -D -S -G www-data www-data
 
-# Change ownership of web directory
+# Change ownership of web directory and logs directory
 RUN chown -R www-data:www-data /usr/local/apache2/htdocs/ \
-    && chmod -R 755 /usr/local/apache2/htdocs/
+    && chown -R www-data:www-data /usr/local/apache2/logs/ \
+    && chmod -R 755 /usr/local/apache2/htdocs/ \
+    && chmod -R 755 /usr/local/apache2/logs/
 
 WORKDIR /usr/local/apache2/htdocs/
 EXPOSE 80
