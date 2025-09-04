@@ -22,8 +22,9 @@ function getPhpVersion(): string
         return '';
     }
 
-    preg_match_all('/[\^>=~]+(\d\.\d*)/', $php, $matches);
-    return $matches[1][1] ?? $matches[1][0] ?? '';
+    // Extract PHP version from various constraint formats: ^8.3, ~8.2, >=8.4, 8.1.*, etc.
+    preg_match('/(\d+\.\d+)/', $php, $matches);
+    return $matches[1] ?? '';
 }
 
 function dbNeeded(): bool
