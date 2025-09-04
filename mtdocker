@@ -93,11 +93,109 @@ function addToGitignore(string $projectDir): void
     }
 }
 
-function getDbPort(): int
+function performTemplateInitialization(string $template, bool $requireConfirmation = false, bool $showSuccessMessage = true): bool
 {
-    // Generate a port between 10000-65000 based on container name hash
-    $hash = md5(getContainerName());
-    return 10000 + (hexdec(substr($hash, 0, 4)) % 55000);
+    $projectDir = getProjectDir();
+    $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
+    $templatesPath = __DIR__ . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $template;
+
+    if (!is_dir($templatesPath)) {
+        echo "Error: Template '$template' not found.\n";
+        if ($requireConfirmation) {
+            echo "Templates available: apache-simple, apache-mysql, symfony\n";
+        }
+        return false;
+    }
+
+    // Handle existing directory with confirmation if required
+    if (is_dir($mtdockerPath) && $requireConfirmation) {
+        echo ".mtdocker directory already exists. Do you want to replace it? (y/N): ";
+        $handle = fopen("php://stdin", "r");
+        $response = trim(fgets($handle));
+        fclose($handle);
+
+        if (strtolower($response) !== 'y') {
+            echo "Initialization cancelled.\n";
+            return false;
+        }
+
+        exec("rm -rf " . escapeshellarg($mtdockerPath));
+    } elseif (!is_dir($mtdockerPath)) {
+        // Create .mtdocker directory if it doesn't exist
+        mkdir($mtdockerPath, 0755, true);
+    }
+
+    // Copy template files (including hidden files)
+    exec("cp -r " . escapeshellarg($templatesPath) . "/. " . escapeshellarg($mtdockerPath) . " 2>/dev/null || true");
+    exec("cp -r " . escapeshellarg($templatesPath) . "/* " . escapeshellarg($mtdockerPath) . " 2>/dev/null || true");
+
+    // Process .env file from .env.example
+    $envExamplePath = $mtdockerPath . DIRECTORY_SEPARATOR . '.env.example';
+    $envPath = $mtdockerPath . DIRECTORY_SEPARATOR . '.env';
+
+    if (file_exists($envExamplePath)) {
+        $envContent = file_get_contents($envExamplePath);
+
+        // Auto-detect USER_ID and GROUP_ID
+        $uid = getmyuid();
+        $gid = getmygid();
+        $envContent = str_replace(
+                ['USER_ID=1000', 'GROUP_ID=1000'],
+                ["USER_ID=$uid", "GROUP_ID=$gid"],
+                $envContent
+        );
+
+        // Auto-detect PHP version and image
+        $phpVersion = getPhpVersion();
+        $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'apache';
+        $envContent = str_replace('PHP_IMAGE=php:apache', "PHP_IMAGE=$phpImage", $envContent);
+
+        // Generate container names based on project (for Symfony template)
+        if ($template === 'symfony') {
+            $apacheContainerName = getContainerName();
+            $projectBaseName = getProjectBaseName();
+            $envContent = str_replace(
+                [
+                    'CONTAINER_NAME_APACHE=apache-php',
+                    'CONTAINER_NAME_MYSQL=mysql-db',
+                    'CONTAINER_NAME_PHPMYADMIN=symfony-phpmyadmin',
+                    'CONTAINER_NAME_REDIS=symfony-redis',
+                    'CONTAINER_NAME_MAILHOG=symfony-mailhog'
+                ],
+                [
+                    "CONTAINER_NAME_APACHE=$apacheContainerName",
+                    "CONTAINER_NAME_MYSQL=$projectBaseName-mysql",
+                    "CONTAINER_NAME_PHPMYADMIN=$projectBaseName-phpmyadmin",
+                    "CONTAINER_NAME_REDIS=$projectBaseName-redis",
+                    "CONTAINER_NAME_MAILHOG=$projectBaseName-mailhog"
+                ],
+                $envContent
+            );
+        }
+
+        // Generate available ports
+        $envContent = generateAvailablePorts($envContent);
+
+        file_put_contents($envPath, $envContent);
+        
+        if ($requireConfirmation) {
+            echo ".env file created with your system settings.\n";
+        }
+    }
+
+    // Add .mtdocker to .gitignore
+    addToGitignore($projectDir);
+    
+    if ($showSuccessMessage) {
+        if ($requireConfirmation) {
+            echo "Template '$template' initialized successfully in .mtdocker/\n";
+            echo "You can now use: ./vendor/bin/mtdocker up -d\n";
+        } else {
+            echo "Auto-initialized '$template' template.\n";
+        }
+    }
+    
+    return true;
 }
 
 function ensureEnvironment(): void
@@ -116,76 +214,8 @@ function autoInitTemplate(): void
     // Auto-detect template based on project
     $template = detectTemplate();
     
-    $projectDir = getProjectDir();
-    $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
-    $templatesPath = __DIR__ . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $template;
-
-    if (!is_dir($templatesPath)) {
-        echo "Error: Template '$template' not found.\n";
-        return;
-    }
-
-    // Create .mtdocker directory
-    mkdir($mtdockerPath, 0755, true);
-
-    // Copy template files (including hidden files)
-    exec("cp -r " . escapeshellarg($templatesPath) . "/. " . escapeshellarg($mtdockerPath) . " 2>/dev/null || true");
-    exec("cp -r " . escapeshellarg($templatesPath) . "/* " . escapeshellarg($mtdockerPath) . " 2>/dev/null || true");
-
-    // Create .env file from .env.example
-    $envExamplePath = $mtdockerPath . DIRECTORY_SEPARATOR . '.env.example';
-    $envPath = $mtdockerPath . DIRECTORY_SEPARATOR . '.env';
-
-    if (file_exists($envExamplePath)) {
-        $envContent = file_get_contents($envExamplePath);
-
-        // Auto-detect USER_ID and GROUP_ID
-        $uid = getmyuid();
-        $gid = getmygid();
-        $envContent = str_replace(
-                ['USER_ID=1000', 'GROUP_ID=1000'],
-                ["USER_ID=$uid", "GROUP_ID=$gid"],
-                $envContent
-        );
-
-        // Auto-detect PHP version and image
-        $phpVersion = getPhpVersion();
-        // All templates now use php:apache
-        $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'apache';
-        $envContent = str_replace('PHP_IMAGE=php:apache', "PHP_IMAGE=$phpImage", $envContent);
-
-        // Generate container names based on project
-        $apacheContainerName = getContainerName(); // docker-database-8-4
-        $projectBaseName = getProjectBaseName(); // database
-        // Symfony template additional containers
-        $envContent = str_replace(
-            [
-                'CONTAINER_NAME_APACHE=apache-php',
-                'CONTAINER_NAME_MYSQL=mysql-db',
-                'CONTAINER_NAME_PHPMYADMIN=symfony-phpmyadmin',
-                'CONTAINER_NAME_REDIS=symfony-redis',
-                'CONTAINER_NAME_MAILHOG=symfony-mailhog'
-            ],
-            [
-                "CONTAINER_NAME_APACHE=$apacheContainerName",
-                "CONTAINER_NAME_MYSQL=$projectBaseName-mysql",
-                "CONTAINER_NAME_PHPMYADMIN=$projectBaseName-phpmyadmin",
-                "CONTAINER_NAME_REDIS=$projectBaseName-redis",
-                "CONTAINER_NAME_MAILHOG=$projectBaseName-mailhog"
-            ],
-            $envContent
-        );
-
-        // Generate available ports
-        $envContent = generateAvailablePorts($envContent);
-
-        file_put_contents($envPath, $envContent);
-    }
-
-    // Add .mtdocker to .gitignore if .gitignore exists
-    addToGitignore($projectDir);
-    
-    echo "Auto-initialized '$template' template.\n";
+    // Use the common initialization function without confirmation
+    performTemplateInitialization($template, false, true);
 }
 
 function dockerComposeCommand(): string
@@ -253,71 +283,8 @@ function initTemplate(string $template): void
         echo "Auto-detected template: $template\n";
     }
 
-    $projectDir = getProjectDir();
-    $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
-    $templatesPath = __DIR__ . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $template;
-
-    if (!is_dir($templatesPath)) {
-        echo "Template '$template' not found.\n";
-        echo "Templates available: apache-simple, apache-mysql, symfony\n";
-        return;
-    }
-
-    if (is_dir($mtdockerPath)) {
-        echo ".mtdocker directory already exists. Do you want to replace it? (y/N): ";
-        $handle = fopen("php://stdin", "r");
-        $response = trim(fgets($handle));
-        fclose($handle);
-
-        if (strtolower($response) !== 'y') {
-            echo "Initialization cancelled.\n";
-            return;
-        }
-
-        exec("rm -rf " . escapeshellarg($mtdockerPath));
-    }
-
-    // Create .mtdocker directory
-    mkdir($mtdockerPath, 0755, true);
-
-    // Copy template files (including hidden files)
-    exec("cp -r " . escapeshellarg($templatesPath) . "/. " . escapeshellarg($mtdockerPath) . " 2>/dev/null || true");
-    exec("cp -r " . escapeshellarg($templatesPath) . "/* " . escapeshellarg($mtdockerPath) . " 2>/dev/null || true");
-
-    // Create .env file from .env.example
-    $envExamplePath = $mtdockerPath . DIRECTORY_SEPARATOR . '.env.example';
-    $envPath = $mtdockerPath . DIRECTORY_SEPARATOR . '.env';
-
-    if (file_exists($envExamplePath)) {
-        $envContent = file_get_contents($envExamplePath);
-
-        // Auto-detect USER_ID and GROUP_ID
-        $uid = getmyuid();
-        $gid = getmygid();
-        $envContent = str_replace(
-                ['USER_ID=1000', 'GROUP_ID=1000'],
-                ["USER_ID=$uid", "GROUP_ID=$gid"],
-                $envContent
-        );
-
-        // Auto-detect PHP version and image
-        $phpVersion = getPhpVersion();
-        // All templates now use php:apache
-        $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'apache';
-        $envContent = str_replace('PHP_IMAGE=php:apache', "PHP_IMAGE=$phpImage", $envContent);
-
-        // Generate available ports
-        $envContent = generateAvailablePorts($envContent);
-
-        file_put_contents($envPath, $envContent);
-        echo ".env file created with your system settings.\n";
-    }
-
-    // Add .mtdocker to .gitignore if .gitignore exists
-    addToGitignore($projectDir);
-    
-    echo "Template '$template' initialized successfully in .mtdocker/\n";
-    echo "You can now use: ./vendor/bin/mtdocker up -d\n";
+    // Use the common initialization function with confirmation
+    performTemplateInitialization($template, true);
 }
 
 function generateAvailablePorts(string $envContent): string
