@@ -108,14 +108,14 @@ function configureSymfonyDoctrine(string $projectDir): void
         return; // Already configured
     }
     
-    // Replace the DATABASE_URL configuration with individual parameters
+    // Replace the DATABASE_URL configuration with flexible fallback configuration
     $oldConfig = "url: '%env(resolve:DATABASE_URL)%'";
-    $newConfig = "#url: '%env(resolve:DATABASE_URL)%'
-        host: '%env(DATABASE_HOST)%'
-        port: '%env(DATABASE_PORT)%'
-        dbname: '%env(DATABASE_NAME)%'
-        user: '%env(DATABASE_USER)%'
-        password: '%env(DATABASE_PASSWORD)%'
+    $newConfig = "url: '%env(default::DATABASE_URL)%'
+        host: '%env(default::DATABASE_HOST)%'
+        port: '%env(default::DATABASE_PORT)%'
+        dbname: '%env(default::DATABASE_NAME)%'
+        user: '%env(default::DATABASE_USER)%'
+        password: '%env(default::DATABASE_PASSWORD)%'
         driver: 'pdo_mysql'";
     
     $updatedContent = str_replace($oldConfig, $newConfig, $doctrineContent);
