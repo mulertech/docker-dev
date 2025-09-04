@@ -215,7 +215,7 @@ function autoInitTemplate(): void
     $template = detectTemplate();
     
     // Use the common initialization function without confirmation
-    performTemplateInitialization($template, false, true);
+    performTemplateInitialization($template);
 }
 
 function dockerComposeCommand(): string
@@ -315,30 +315,31 @@ function generateAvailablePorts(string $envContent): string
 
     foreach ($ports as $varName => $port) {
         // Replace port values
-        $envContent = preg_replace("/^$varName=\d+$/m", "$varName=$port", $envContent);
+        $envContent = preg_replace("/^$varName=\d+$/m", "$varName=$port", $envContent) ?? $envContent;
+        $envContent = (string)$envContent;
         
         // Update comments with actual generated ports
         if ($varName === 'APACHE_PORT') {
-            $envContent = preg_replace(
-                '/# Port to access Apache web server \(ex: [^)]+\)/',
+            $envContent = str_replace(
+                '# Port to access Apache web server (ex: http://localhost:8080)',
                 "# Port to access Apache web server (http://localhost:$port)",
                 $envContent
             );
         } elseif ($varName === 'MYSQL_PORT') {
-            $envContent = preg_replace(
-                '/# Port to access MySQL directly \(ex: [^)]+\)/',
+            $envContent = str_replace(
+                '# Port to access MySQL directly (ex: localhost:3307)',
                 "# Port to access MySQL directly (localhost:$port)",
                 $envContent
             );
         } elseif ($varName === 'PHPMYADMIN_PORT') {
-            $envContent = preg_replace(
-                '/# Port to access PhpMyAdmin \(ex: [^)]+\)/',
+            $envContent = str_replace(
+                '# Port to access PhpMyAdmin (ex: http://localhost:8081)',
                 "# Port to access PhpMyAdmin (http://localhost:$port)",
                 $envContent
             );
         } elseif ($varName === 'MAILHOG_PORT') {
-            $envContent = preg_replace(
-                '/# Port for MailHog web interface \(ex: [^)]+\)/',
+            $envContent = str_replace(
+                '# Port for MailHog web interface (ex: http://localhost:8025)',
                 "# Port for MailHog web interface (http://localhost:$port)",
                 $envContent
             );
