@@ -227,7 +227,7 @@ This command will output the project name that should be used in the `COMPOSE_PR
 - `apache-simple`: Basic Apache + PHP environment for simple web projects
 - `apache-mysql`: Apache + PHP + MySQL environment for database-driven applications
 - `apache-html`: Pure Apache HTTP server for static HTML/CSS/JS projects (no PHP) - [Download template files](https://github.com/mulertech/docker-dev/tree/main/templates/apache-html)
-- `symfony`: Complete Symfony development environment with Apache, MySQL, PhpMyAdmin, Redis, and MailHog
+- `symfony`: Complete Symfony development environment with Apache, MySQL, PhpMyAdmin, Redis, and MailHog (automatically configures Doctrine for Docker environment)
 
 **Template initialization process:**
 - Creates a `.mtdocker/` directory in your project root
