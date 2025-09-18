@@ -30,13 +30,7 @@ This package simplifies web development by providing pre-configured Docker envir
 1. Include the package as a dev dependency with Composer :
 
     ```sh
-    composer require-dev mulertech/docker-dev
-    ```
-
-2. Run the following command to install the package :
-
-    ```sh
-    composer install
+    composer require --dev mulertech/docker-dev
     ```
 
 ### For Static HTML/CSS/JS Projects (Apache-HTML)
