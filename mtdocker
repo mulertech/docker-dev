@@ -392,8 +392,8 @@ function generatePortFromName(string $name): int
 {
     // Generate a deterministic port based on the name hash
     $hash = md5($name);
-    // Convert first 4 hex chars to decimal and map to port range 10000-65000
-    $port = 10000 + (hexdec(substr($hash, 0, 4)) % 55000);
+    // Convert first 4 hex chars to decimal and map to port range 1024-49151
+    $port = 1024 + (hexdec(substr($hash, 0, 4)) % 48128);
 
     // Ensure the port is available, if not increment until we find one
     return findAvailablePortFromBase($port);
