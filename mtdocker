@@ -215,6 +215,9 @@ function performTemplateInitialization(string $template, bool $requireConfirmati
         if ($requireConfirmation) {
             echo ".env file created with your system settings.\n";
         }
+
+        // Remove .env.example after processing
+        unlink($envExamplePath);
     }
 
     // Add .mtdocker to .gitignore
