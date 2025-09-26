@@ -192,14 +192,14 @@ function performTemplateInitialization(string $template, bool $requireConfirmati
                 [
                     'CONTAINER_NAME_APACHE=apache-php',
                     'CONTAINER_NAME_POSTGRES=postgres-db',
-                    'CONTAINER_NAME_PGADMIN=symfony-pgadmin',
+                    'CONTAINER_NAME_ADMINER=symfony-adminer',
                     'CONTAINER_NAME_REDIS=symfony-redis',
                     'CONTAINER_NAME_MAILHOG=symfony-mailhog'
                 ],
                 [
                     "CONTAINER_NAME_APACHE=$apacheContainerName",
                     "CONTAINER_NAME_POSTGRES=$projectBaseName-postgres",
-                    "CONTAINER_NAME_PGADMIN=$projectBaseName-pgadmin",
+                    "CONTAINER_NAME_ADMINER=$projectBaseName-adminer",
                     "CONTAINER_NAME_REDIS=$projectBaseName-redis",
                     "CONTAINER_NAME_MAILHOG=$projectBaseName-mailhog"
                 ],
@@ -348,8 +348,8 @@ function generateAvailablePorts(string $envContent): string
     if (str_contains($envContent, 'PHPMYADMIN_PORT=')) {
         $ports['PHPMYADMIN_PORT'] = generatePortFromName($projectName . '-phpmyadmin');
     }
-    if (str_contains($envContent, 'PGADMIN_PORT=')) {
-        $ports['PGADMIN_PORT'] = generatePortFromName($projectName . '-pgadmin');
+    if (str_contains($envContent, 'ADMINER_PORT=')) {
+        $ports['ADMINER_PORT'] = generatePortFromName($projectName . '-adminer');
     }
     if (str_contains($envContent, 'REDIS_PORT=')) {
         $ports['REDIS_PORT'] = generatePortFromName($projectName . '-redis');
@@ -391,10 +391,10 @@ function generateAvailablePorts(string $envContent): string
                 "# Port to access PhpMyAdmin (http://localhost:$port)",
                 $envContent
             );
-        } elseif ($varName === 'PGADMIN_PORT') {
+        } elseif ($varName === 'ADMINER_PORT') {
             $envContent = str_replace(
-                '# Port to access pgAdmin (ex: http://localhost:8081)',
-                "# Port to access pgAdmin (http://localhost:$port)",
+                '# Port to access Adminer (ex: http://localhost:8081)',
+                "# Port to access Adminer (http://localhost:$port)",
                 $envContent
             );
         } elseif ($varName === 'MAILHOG_PORT') {
