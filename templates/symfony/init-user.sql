@@ -1,5 +1,6 @@
--- Create user with network access like in the old working system
-CREATE USER IF NOT EXISTS 'user'@'%' IDENTIFIED BY 'password';
--- Grant all privileges including database creation
-GRANT ALL PRIVILEGES ON *.* TO 'user'@'%' WITH GRANT OPTION;
-FLUSH PRIVILEGES;
+-- PostgreSQL initialization script
+-- Note: User and database are already created via environment variables
+-- This script is for additional setup if needed
+
+-- Grant additional privileges if needed
+-- ALTER USER user CREATEDB;

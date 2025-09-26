@@ -1,6 +1,6 @@
 # SQL Initialization Files
 
-Place your `.sql` files here to initialize your database.
+Place your `.sql` files here to initialize your PostgreSQL database.
 
 ## Usage
 
@@ -17,8 +17,8 @@ Place your `.sql` files here to initialize your database.
 
 ## File execution order
 
-MySQL executes files in alphabetical order:
-1. `01-init-user.sql` (system - creates user with network permissions)
+PostgreSQL executes files in alphabetical order:
+1. `01-init-user.sql` (system - for additional setup if needed)
 2. `02-your-backup.sql` (your files)
 3. `03-more-data.sql` (your files)
 
@@ -27,3 +27,7 @@ MySQL executes files in alphabetical order:
 - `.sql` files (recommended)
 - `.sql.gz` compressed files
 - `.sh` shell scripts
+
+## Note
+
+PostgreSQL user and database are automatically created via environment variables in docker-compose.yml, so the init-user.sql script is mainly for additional setup if needed.

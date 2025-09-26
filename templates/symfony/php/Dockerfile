@@ -12,8 +12,7 @@ RUN install-php-extensions \
     # Core Symfony requirements
     intl \
     pdo \
-    pdo_mysql \
-    mysqli \
+    pdo_pgsql \
     zip \
     # Image processing
     gd \
@@ -44,7 +43,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     unzip \
     # Database
-    default-mysql-client \
+    postgresql-client \
     # Node.js and npm for Tailwind CSS, Symfony UX and AssetMapper
     nodejs \
     npm \

@@ -7,7 +7,7 @@ ___
 ___
 
 
-The **MulerTech Docker-dev** package provides complete Docker-based development environments for web projects with multiple templates (Apache, MySQL, Symfony) and includes integrated testing capabilities.
+The **MulerTech Docker-dev** package provides complete Docker-based development environments for web projects with multiple templates (Apache, MySQL/PostgreSQL, Symfony) and includes integrated testing capabilities.
 
 ## Description
 
@@ -221,7 +221,7 @@ This command will output the project name that should be used in the `COMPOSE_PR
 - `apache-simple`: Basic Apache + PHP environment for simple web projects
 - `apache-mysql`: Apache + PHP + MySQL environment for database-driven applications
 - `apache-html`: Pure Apache HTTP server for static HTML/CSS/JS projects (no PHP) - [Download template files](https://github.com/mulertech/docker-dev/tree/main/templates/apache-html)
-- `symfony`: Complete Symfony development environment with Apache, MySQL, PhpMyAdmin, Redis, and MailHog (automatically configures Doctrine for Docker environment)
+- `symfony`: Complete Symfony development environment with Apache, PostgreSQL, pgAdmin, Redis, and MailHog (automatically configures Doctrine for Docker environment)
 
 **Template initialization process:**
 - Creates a `.mtdocker/` directory in your project root
@@ -233,7 +233,7 @@ This command will output the project name that should be used in the `COMPOSE_PR
 
 ### Database Initialization
 
-For templates with MySQL (`apache-mysql` and `symfony`), you can easily initialize your database with custom SQL files:
+For templates with databases (`apache-mysql` with MySQL, and `symfony` with PostgreSQL), you can easily initialize your database with custom SQL files:
 
 ```sh
 # 1. Copy your SQL files to the sql directory
@@ -246,7 +246,7 @@ cp schema.sql .mtdocker/sql/01-schema.sql
 ```
 
 **File execution order:**
-- `01-init-user.sql` (system - creates user with network permissions)
+- `01-init-user.sql` (system - for MySQL creates user with network permissions, for PostgreSQL provides additional setup if needed)
 - Your SQL files in alphabetical order (e.g., `01-schema.sql`, `02-data.sql`)
 - Supports `.sql`, `.sql.gz`, and `.sh` files
 
@@ -279,7 +279,7 @@ Configure PHPStorm to work with your Docker development environment:
 - When you run any command, the system automatically detects if a development environment exists
 - If no `.mtdocker/` directory is found, it auto-initializes the most appropriate template
 - Smart detection analyzes your `composer.json` to choose the perfect environment:
-  - **Symfony projects**: Full Symfony stack with Apache, MySQL, PhpMyAdmin, Redis, MailHog
+  - **Symfony projects**: Full Symfony stack with Apache, PostgreSQL, pgAdmin, Redis, MailHog
   - **Database projects**: Apache + PHP + MySQL when `ext-pdo` is detected
   - **Simple projects**: Basic Apache + PHP environment
 
