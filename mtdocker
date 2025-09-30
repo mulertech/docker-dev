@@ -127,6 +127,27 @@ function configureSymfonyDoctrine(string $projectDir): void
     }
 }
 
+function configureSymfonyMailer(string $projectDir): void
+{
+    $envPath = $projectDir . '/.env';
+    
+    if (!file_exists($envPath)) {
+        return; // Skip if .env doesn't exist
+    }
+    
+    $envContent = file_get_contents($envPath);
+    
+    // Check if MAILER_DSN exists and update it to use MailHog
+    if (str_contains($envContent, 'MAILER_DSN=null://null')) {
+        $updatedContent = str_replace('MAILER_DSN=null://null', 'MAILER_DSN=smtp://mailhog:1025', $envContent);
+        
+        if ($updatedContent !== $envContent) {
+            file_put_contents($envPath, $updatedContent);
+            echo "Updated .env MAILER_DSN for MailHog integration\n";
+        }
+    }
+}
+
 function performTemplateInitialization(string $template, bool $requireConfirmation = false, bool $showSuccessMessage = true): bool
 {
     $projectDir = getProjectDir();
@@ -226,6 +247,7 @@ function performTemplateInitialization(string $template, bool $requireConfirmati
     // Configure Symfony Doctrine if it's a Symfony template
     if ($template === 'symfony') {
         configureSymfonyDoctrine($projectDir);
+        configureSymfonyMailer($projectDir);
     }
     
     if ($showSuccessMessage) {

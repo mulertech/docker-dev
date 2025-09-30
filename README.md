@@ -229,6 +229,8 @@ This command will output the project name that should be used in the `COMPOSE_PR
 - Creates a `.env` file with auto-detected system settings (USER_ID, GROUP_ID, PHP version)
 - Generates deterministic ports based on project name to avoid conflicts
 - **Automatically adds `.mtdocker/` to `.gitignore`** (best practice)
+- **Automatically configures Symfony projects** with Doctrine settings for PostgreSQL into `doctrine.yaml`
+- **Automatically configures Symfony Mailer** to use MailHog into `.env`
 - Provides a complete development environment ready to use
 
 ### Database Initialization
