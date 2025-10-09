@@ -210,6 +210,16 @@ To get the project name used for Docker Compose (useful for PHPStorm configurati
 
 This command will output the project name that should be used in the `COMPOSE_PROJECT_NAME` environment variable when configuring PHPStorm.
 
+#### Getting the application link
+
+To get the clickable link to access your application, use the following command:
+
+```sh
+./vendor/bin/mtdocker link
+```
+
+This command will display a clickable link to your application (e.g., http://localhost:8080).
+
 ### Available Templates
 
 **Smart template auto-detection:**

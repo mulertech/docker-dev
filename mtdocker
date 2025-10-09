@@ -603,7 +603,8 @@ if ($arg1 === 'ps') {
 }
 
 if ($arg1 === 'name') {
-    echo getProjectName() . PHP_EOL;
+    $projectName = getProjectName();
+    echo "Project name : $projectName" . PHP_EOL . "Configuration CLI interpreter environment variable : COMPOSE_PROJECT_NAME=$projectName" . PHP_EOL;
 }
 
 if ($arg1 === 'init') {
@@ -612,4 +613,9 @@ if ($arg1 === 'init') {
 
 if ($arg1 === 'symfony') {
     symfony();
+}
+
+if ($arg1 === 'link') {
+    ensureEnvironment();
+    displayApacheLink();
 }
