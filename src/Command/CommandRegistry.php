@@ -5,6 +5,10 @@ namespace MulerTech\DockerDev\Command;
 use MulerTech\DockerDev\Docker;
 use MulerTech\DockerDev\Composer;
 
+/**
+ * Class CommandRegistry
+ * @package MulerTech\DockerDev
+ */
 class CommandRegistry
 {
     private array $commands = [];

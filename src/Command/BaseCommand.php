@@ -32,7 +32,7 @@ abstract class BaseCommand implements CommandInterface
 
     protected function buildCommand(array $defaultArgs, array $customArgs = []): string
     {
-        $allArgs = array_merge($defaultArgs, $customArgs);
+        $allArgs = $customArgs !== [] ? $customArgs : $defaultArgs;
         return implode(' ', array_map('escapeshellarg', $allArgs));
     }
 }

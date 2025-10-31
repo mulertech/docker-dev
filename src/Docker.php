@@ -2,6 +2,10 @@
 
 namespace MulerTech\DockerDev;
 
+/**
+ * Class Docker
+ * @package MulerTech\DockerDev
+ */
 class Docker
 {
     private Composer $composer;
@@ -65,8 +69,11 @@ class Docker
         }
     }
 
-    public function performTemplateInitialization(string $template, bool $requireConfirmation = false, bool $showSuccessMessage = true): bool
-    {
+    public function performTemplateInitialization(
+        string $template,
+        bool $requireConfirmation = false,
+        bool $showSuccessMessage = true
+    ): bool {
         $projectDir = $this->composer->getProjectDir();
         $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
         $templatesPath = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $template;

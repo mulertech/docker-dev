@@ -2,6 +2,10 @@
 
 namespace MulerTech\DockerDev;
 
+/**
+ * Class Symfony
+ * @package MulerTech\DockerDev
+ */
 class Symfony
 {
     private Composer $composer;

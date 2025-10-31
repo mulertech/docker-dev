@@ -2,8 +2,10 @@
 
 namespace MulerTech\DockerDev\Command;
 
-use MulerTech\DockerDev\Docker;
-
+/**
+ * Class CsFixerCommand
+ * @package MulerTech\DockerDev
+ */
 class CsFixerCommand extends BaseCommand
 {
     public function getName(): string
@@ -13,7 +15,7 @@ class CsFixerCommand extends BaseCommand
 
     public function getDefaultArgs(): array
     {
-        return ['./vendor/bin/php-cs-fixer', 'fix', 'src'];
+        return ['fix', 'src'];
     }
 
     public function requiresDocker(): bool
@@ -24,7 +26,7 @@ class CsFixerCommand extends BaseCommand
     protected function runCommand(array $customArgs = []): void
     {
         $containerName = $this->docker->getContainerName();
-        $cmd = 'docker exec -it ' . $containerName . ' ' . $this->buildCommand($this->getDefaultArgs(), $customArgs);
+        $cmd = 'docker exec -it ' . $containerName . './vendor/bin/php-cs-fixer' . ' ' . $this->buildCommand($this->getDefaultArgs(), $customArgs);
         $output = shell_exec($cmd);
         echo $output;
     }

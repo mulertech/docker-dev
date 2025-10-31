@@ -2,11 +2,15 @@
 
 namespace MulerTech\DockerDev;
 
+/**
+ * Class Composer
+ * @package MulerTech\DockerDev
+ */
 class Composer
 {
     public function getProjectDir(): string
     {
-        $projectDir = dirname(__DIR__, 1);
+        $projectDir = dirname(__DIR__);
 
         while (!file_exists($projectDir . '/composer.json')) {
             $projectDir = dirname($projectDir);

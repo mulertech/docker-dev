@@ -5,6 +5,10 @@ namespace MulerTech\DockerDev\Command;
 use MulerTech\DockerDev\Docker;
 use MulerTech\DockerDev\Composer;
 
+/**
+ * Class SymfonyCommand
+ * @package MulerTech\DockerDev
+ */
 class SymfonyCommand extends BaseCommand
 {
     private Composer $composer;
@@ -22,7 +26,7 @@ class SymfonyCommand extends BaseCommand
 
     public function getDefaultArgs(): array
     {
-        return ['php', 'bin/console'];
+        return ['list'];
     }
 
     public function requiresDocker(): bool
@@ -43,7 +47,7 @@ class SymfonyCommand extends BaseCommand
     protected function runCommand(array $customArgs = []): void
     {
         $containerName = $this->docker->getContainerName();
-        $cmd = 'docker exec -it ' . $containerName . ' ' . $this->buildCommand($this->getDefaultArgs(), $customArgs);
+        $cmd = 'docker exec -it ' . $containerName . 'php bin/console' . ' ' . $this->buildCommand($this->getDefaultArgs(), $customArgs);
         passthru($cmd);
     }
 }
