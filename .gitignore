@@ -2,3 +2,5 @@
 .idea
 vendor
 composer.lock
+# Docker development environment
+.mtdocker/
