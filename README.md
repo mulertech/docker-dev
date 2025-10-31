@@ -115,7 +115,20 @@ Integrated testing tools work seamlessly within your development environment:
 To run the tests, use the following command:
 
 ```sh
-./vendor/bin/mtdocker test
+./vendor/bin/mtdocker test [arguments...]
+```
+
+You can pass any additional arguments to PHPUnit:
+
+```sh
+# Run specific test class
+./vendor/bin/mtdocker test --filter=MyTestClass
+
+# Run with verbose output
+./vendor/bin/mtdocker test --verbose
+
+# Run specific test method
+./vendor/bin/mtdocker test --filter=MyTestClass::testMyMethod
 ```
 
 To run the tests with code coverage, use the following command:
@@ -123,12 +136,13 @@ To run the tests with code coverage, use the following command:
 ```sh
 ./vendor/bin/mtdocker test-coverage
 ```
+
 The code coverage report will be generated in the `./.phpunit.cache/coverage` folder.
 
 These commands will:
 - Check if the Docker container is running.
 - If the container is not running, it will be started.
-- Run the PHPUnit tests in the container.
+- Run the PHPUnit tests in the container with all provided arguments.
 - Stop the container if it was not running before the tests were executed.
 
 ### Running phpstan
@@ -136,13 +150,23 @@ These commands will:
 To run phpstan, use the following command:
 
 ```sh
-./vendor/bin/mtdocker phpstan
+./vendor/bin/mtdocker phpstan [arguments...]
+```
+
+You can pass any additional arguments to phpstan:
+
+```sh
+# Run with custom memory limit
+./vendor/bin/mtdocker phpstan analyse --memory-limit=2G
+
+# Generate baseline
+./vendor/bin/mtdocker phpstan analyse --generate-baseline
 ```
 
 This command will:
 - Check if the Docker container is running.
 - If the container is not running, it will be started.
-- Run phpstan in the container.
+- Run phpstan in the container with all provided arguments.
 - Stop the container if it was not running before phpstan was executed.
 
 ### Running php-cs-fixer
@@ -150,13 +174,23 @@ This command will:
 To run php-cs-fixer, use the following command:
 
 ```sh
-./vendor/bin/mtdocker php-cs-fixer
+./vendor/bin/mtdocker cs-fixer [arguments...]
+```
+
+You can pass any additional arguments to php-cs-fixer:
+
+```sh
+# Fix specific files
+./vendor/bin/mtdocker cs-fixer fix src/MyClass.php
+
+# Check only (dry-run)
+./vendor/bin/mtdocker cs-fixer fix --dry-run
 ```
 
 This command will:
 - Check if the Docker container is running.
 - If the container is not running, it will be started.
-- Run php-cs-fixer in the container.
+- Run php-cs-fixer in the container with all provided arguments.
 - Stop the container if it was not running before php-cs-fixer was executed.
 
 ### Symfony Console Commands (Symfony projects only)
@@ -285,34 +319,22 @@ Configure PHPStorm to work with your Docker development environment:
 4. Path to script: `/var/www/html/vendor/autoload.php`
 5. Default configuration file: `/var/www/html/phpunit.dist.xml` (needed for Symfony projects)
 
-## How It Works
+## Architecture
 
-**Intelligent Environment Setup:**
-- When you run any command, the system automatically detects if a development environment exists
-- If no `.mtdocker/` directory is found, it auto-initializes the most appropriate template
-- Smart detection analyzes your `composer.json` to choose the perfect environment:
-  - **Symfony projects**: Full Symfony stack with Apache, PostgreSQL, pgAdmin, Redis, MailHog
-  - **Database projects**: Apache + PHP + MySQL when `ext-pdo` is detected
-  - **Simple projects**: Basic Apache + PHP environment
+### Core Classes
+- **`Composer`**: Project analysis (PHP version detection, database requirements, Symfony detection)
+- **`Docker`**: Template management, port generation, Docker operations
+- **`Symfony`**: Symfony-specific configurations (Doctrine, Mailer)
+- **`Application`**: Main orchestrator handling CLI commands
 
-**Template Features:**
-- Pre-configured Docker environments for different project types
-- Auto-detected system settings (USER_ID, GROUP_ID, PHP version)
-- Deterministic port generation to avoid conflicts between projects
-- Complete development stacks ready to use immediately
+### Command System
+- **`CommandInterface`**: Contract for all commands
+- **`BaseCommand`**: Abstract base with Docker lifecycle management
+- **Specific Commands**: `PhpunitCommand`, `PhpStanCommand`, `CsFixerCommand`, `SymfonyCommand`
+- **`CommandRegistry`**: Command routing and management
 
-**Smart Defaults:**
-- PHP version auto-detected from `composer.json`
-- Database services included when needed
-- Unique container names and ports per project
-- No manual configuration required
-
-**Container Naming:**
-- **Apache containers**: `docker-<project-name>-<php-version>` (e.g., `docker-myapp-8-4`)
-- **Other services**: `<project-name>-<service>` (e.g., `myapp-mysql`, `myapp-redis`)
-- **Project name**: Used for Docker Compose isolation between projects
-
-**Automatic Git Integration:**
-- `.mtdocker/` directory is automatically added to `.gitignore`
-- Each developer gets their own local environment configuration
-- No conflicts between team members' development setups
+### Key Features
+- **Custom Arguments**: All commands support additional arguments (e.g., `./vendor/bin/mtdocker phpstan --generate-baseline`)
+- **Auto-initialization**: Environment setup happens automatically when needed
+- **Smart Detection**: Project type detection for optimal template selection
+- **Permission Handling**: Proper UID/GID management for file permissions
