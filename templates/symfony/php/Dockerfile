@@ -64,20 +64,20 @@ RUN curl -sS -o /tmp/symfony-cli.tar.gz -L https://github.com/symfony-cli/symfon
 
 # Remove and recreate www-data user with correct IDs
 RUN userdel -r www-data 2>/dev/null || true \
-    && (groupdel www-data 2>/dev/null || true) \
-    && if ! getent group ${GROUP_ID} >/dev/null; then \
+    && if ! getent group ${GROUP_ID} >/dev/null 2>&1; then \
         groupadd -g ${GROUP_ID} www-data; \
     else \
-        EXISTING_GROUP=$(getent group ${GROUP_ID} | cut -d: -f1) && \
-        groupmod -n www-data $EXISTING_GROUP; \
+        EXISTING_GROUP=$(getent group ${GROUP_ID} | cut -d: -f1); \
+        groupmod -n www-data "$EXISTING_GROUP" 2>/dev/null || \
+        groupadd -g 1000 www-data; \
     fi \
-    && useradd -u ${USER_ID} -g ${GROUP_ID} -m -s /bin/bash www-data
+    && useradd -u ${USER_ID} -g www-data -m -s /bin/bash www-data
 
 # Enable required Apache modules
 RUN a2enmod rewrite headers ssl deflate expires
 
 # Configure permissions
-RUN chown -R ${USER_ID}:${GROUP_ID} /var/www/html \
+RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html
 
 # Configure working directory
