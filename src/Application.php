@@ -30,7 +30,7 @@ class Application
                 $this->handleTestCoverage();
                 break;
             case 'test':
-                $this->handleTest();
+                $this->handleTest($args);
                 break;
             case 'up':
                 $this->handleUp($arg2);
@@ -39,10 +39,10 @@ class Application
                 $this->handleDown();
                 break;
             case 'phpstan':
-                $this->handlePhpstan($arg2);
+                $this->handlePhpstan($args);
                 break;
             case 'cs-fixer':
-                $this->handleCsFixer();
+                $this->handleCsFixer($args);
                 break;
             case 'all':
                 $this->handleAll();
@@ -70,9 +70,10 @@ class Application
         $this->commandRegistry->executeCommand('test', ['--coverage-html', './.phpunit.cache/coverage']);
     }
 
-    private function handleTest(): void
+    private function handleTest(array $args): void
     {
-        $this->commandRegistry->executeCommand('test');
+        $consoleArgs = array_slice($args, 2);
+        $this->commandRegistry->executeCommand('test', $consoleArgs);
     }
 
     private function handleUp(string $arg2): void
@@ -85,14 +86,16 @@ class Application
         $this->docker->dockerComposeDown();
     }
 
-    private function handlePhpstan(string $arg2): void
+    private function handlePhpstan(array $args): void
     {
-        $this->commandRegistry->executeCommand('phpstan', [$arg2]);
+        $consoleArgs = array_slice($args, 2);
+        $this->commandRegistry->executeCommand('phpstan', $consoleArgs);
     }
 
-    private function handleCsFixer(): void
+    private function handleCsFixer(array $args): void
     {
-        $this->commandRegistry->executeCommand('cs-fixer');
+        $consoleArgs = array_slice($args, 2);
+        $this->commandRegistry->executeCommand('cs-fixer', $consoleArgs);
     }
 
     private function handleAll(): void
