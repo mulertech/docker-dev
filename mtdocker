@@ -1,7 +1,27 @@
 #!/usr/bin/env php
 <?php
 
-require_once __DIR__ . '/vendor/autoload.php';
+// Autoload detection for both development and installed package contexts
+$autoloadPaths = [
+    __DIR__ . '/vendor/autoload.php',           // Development mode
+    __DIR__ . '/../../autoload.php',            // Installed as dependency (vendor/mulertech/docker-dev)
+    __DIR__ . '/../../../autoload.php',         // Alternative vendor structure
+];
+
+$autoloadFound = false;
+foreach ($autoloadPaths as $autoloadPath) {
+    if (file_exists($autoloadPath)) {
+        require_once $autoloadPath;
+        $autoloadFound = true;
+        break;
+    }
+}
+
+if (!$autoloadFound) {
+    fwrite(STDERR, "Error: Unable to find Composer autoload file.\n");
+    fwrite(STDERR, "Please run 'composer install' in the appropriate directory.\n");
+    exit(1);
+}
 
 use MulerTech\DockerDev\Application;
 
