@@ -10,7 +10,7 @@ class Composer
 {
     public function getProjectDir(): string
     {
-        $projectDir = dirname(__DIR__);
+        $projectDir = getcwd();
 
         while (!file_exists($projectDir . '/composer.json')) {
             $projectDir = dirname($projectDir);

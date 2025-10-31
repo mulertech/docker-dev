@@ -26,7 +26,7 @@ class CsFixerCommand extends BaseCommand
     protected function runCommand(array $customArgs = []): void
     {
         $containerName = $this->docker->getContainerName();
-        $cmd = 'docker exec -it ' . $containerName . './vendor/bin/php-cs-fixer' . ' ' . $this->buildCommand($this->getDefaultArgs(), $customArgs);
+        $cmd = 'docker exec -it ' . $containerName . ' ./vendor/bin/php-cs-fixer' . ' ' . $this->buildCommand($this->getDefaultArgs(), $customArgs);
         $output = shell_exec($cmd);
         echo $output;
     }
