@@ -26,7 +26,8 @@ class PhpStanCommand extends BaseCommand
     protected function runCommand(array $customArgs = []): void
     {
         $containerName = $this->docker->getContainerName();
-        $cmd = 'docker exec -it ' . $containerName . ' ./vendor/bin/phpstan' . ' ' . $this->buildCommand($this->getDefaultArgs(), $customArgs);
+        $ttyFlag = (posix_isatty(STDIN)) ? '-it ' : '-i ';
+        $cmd = 'docker exec ' . $ttyFlag . $containerName . ' ./vendor/bin/phpstan' . ' ' . $this->buildCommand($this->getDefaultArgs(), $customArgs);
         $output = shell_exec($cmd);
         echo $output;
     }

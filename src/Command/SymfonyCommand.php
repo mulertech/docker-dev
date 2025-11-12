@@ -47,7 +47,8 @@ class SymfonyCommand extends BaseCommand
     protected function runCommand(array $customArgs = []): void
     {
         $containerName = $this->docker->getContainerName();
-        $cmd = 'docker exec -it ' . $containerName . ' php bin/console' . ' ' . $this->buildCommand($this->getDefaultArgs(), $customArgs);
+        $ttyFlag = (posix_isatty(STDIN)) ? '-it ' : '-i ';
+        $cmd = 'docker exec ' . $ttyFlag . $containerName . ' php bin/console' . ' ' . $this->buildCommand($this->getDefaultArgs(), $customArgs);
         passthru($cmd);
     }
 }
