@@ -60,13 +60,13 @@ class Symfony
 
         $envContent = file_get_contents($envPath);
 
-        // Check if MAILER_DSN exists and update it to use MailHog
+        // Check if MAILER_DSN exists and update it to use MailPit
         if (str_contains($envContent, 'MAILER_DSN=null://null')) {
-            $updatedContent = str_replace('MAILER_DSN=null://null', 'MAILER_DSN=smtp://mailhog:1025', $envContent);
+            $updatedContent = str_replace('MAILER_DSN=null://null', 'MAILER_DSN=smtp://mailpit:1025', $envContent);
 
             if ($updatedContent !== $envContent) {
                 file_put_contents($envPath, $updatedContent);
-                echo "Updated .env MAILER_DSN for MailHog integration\n";
+                echo "Updated .env MAILER_DSN for MailPit integration\n";
             }
         }
     }

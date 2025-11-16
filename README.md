@@ -265,7 +265,7 @@ This command will display a clickable link to your application (e.g., http://loc
 - `apache-simple`: Basic Apache + PHP environment for simple web projects
 - `apache-mysql`: Apache + PHP + MySQL environment for database-driven applications
 - `apache-html`: Pure Apache HTTP server for static HTML/CSS/JS projects (no PHP) - [Download template files](https://github.com/mulertech/docker-dev/tree/main/templates/apache-html)
-- `symfony`: Complete Symfony development environment with Apache, PostgreSQL, pgAdmin, Redis, and MailHog (automatically configures Doctrine for Docker environment)
+- `symfony`: Complete Symfony development environment with Apache, PostgreSQL, pgAdmin, Redis, and MailPit (automatically configures Doctrine for Docker environment)
 
 **Template initialization process:**
 - Creates a `.mtdocker/` directory in your project root
@@ -274,7 +274,7 @@ This command will display a clickable link to your application (e.g., http://loc
 - Generates deterministic ports based on project name to avoid conflicts
 - **Automatically adds `.mtdocker/` to `.gitignore`** (best practice)
 - **Automatically configures Symfony projects** with Doctrine settings for PostgreSQL into `doctrine.yaml`
-- **Automatically configures Symfony Mailer** to use MailHog into `.env`
+- **Automatically configures Symfony Mailer** to use MailPit into `.env`
 - Provides a complete development environment ready to use
 
 ### Database Initialization

@@ -65,12 +65,12 @@ services:
     networks:
       - symfony-network
 
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: ${CONTAINER_NAME_MAILHOG}
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: ${CONTAINER_NAME_MAILPIT}
     ports:
-      - "${MAILHOG_PORT}:8025"
-      - "${MAILHOG_SMTP_PORT}:1025"
+      - "${MAILPIT_PORT}:8025"
+      - "${MAILPIT_SMTP_PORT}:1025"
     networks:
       - symfony-network
 

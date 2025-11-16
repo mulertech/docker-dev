@@ -139,14 +139,14 @@ class Docker
                         'CONTAINER_NAME_POSTGRES=postgres-db',
                         'CONTAINER_NAME_ADMINER=symfony-adminer',
                         'CONTAINER_NAME_REDIS=symfony-redis',
-                        'CONTAINER_NAME_MAILHOG=symfony-mailhog'
+                        'CONTAINER_NAME_MAILPIT=symfony-mailpit'
                     ],
                     [
                         "CONTAINER_NAME_APACHE=$apacheContainerName",
                         "CONTAINER_NAME_POSTGRES=$projectBaseName-postgres",
                         "CONTAINER_NAME_ADMINER=$projectBaseName-adminer",
                         "CONTAINER_NAME_REDIS=$projectBaseName-redis",
-                        "CONTAINER_NAME_MAILHOG=$projectBaseName-mailhog"
+                        "CONTAINER_NAME_MAILPIT=$projectBaseName-mailpit"
                     ],
                     $envContent
                 );
@@ -301,11 +301,11 @@ class Docker
         if (str_contains($envContent, 'REDIS_PORT=')) {
             $ports['REDIS_PORT'] = $this->generatePortFromName($projectName . '-redis');
         }
-        if (str_contains($envContent, 'MAILHOG_PORT=')) {
-            $ports['MAILHOG_PORT'] = $this->generatePortFromName($projectName . '-mailhog');
+        if (str_contains($envContent, 'MAILPIT_PORT=')) {
+            $ports['MAILPIT_PORT'] = $this->generatePortFromName($projectName . '-mailpit');
         }
-        if (str_contains($envContent, 'MAILHOG_SMTP_PORT=')) {
-            $ports['MAILHOG_SMTP_PORT'] = $this->generatePortFromName($projectName . '-mailhog-smtp');
+        if (str_contains($envContent, 'MAILPIT_SMTP_PORT=')) {
+            $ports['MAILPIT_SMTP_PORT'] = $this->generatePortFromName($projectName . '-mailpit-smtp');
         }
 
         foreach ($ports as $varName => $port) {
@@ -344,10 +344,10 @@ class Docker
                     "# Port to access Adminer (http://localhost:$port)",
                     $envContent
                 );
-            } elseif ($varName === 'MAILHOG_PORT') {
+            } elseif ($varName === 'MAILPIT_PORT') {
                 $envContent = str_replace(
-                    '# Port for MailHog web interface (ex: http://localhost:8025)',
-                    "# Port for MailHog web interface (http://localhost:$port)",
+                    '# Port for MailPit web interface (ex: http://localhost:8025)',
+                    "# Port for MailPit web interface (http://localhost:$port)",
                     $envContent
                 );
             }

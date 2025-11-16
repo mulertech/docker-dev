@@ -52,6 +52,30 @@ RUN apt-get update && apt-get install -y \
 # Install Yarn using npm (more reliable method)
 RUN npm install -g yarn
 
+# Install wkhtmltopdf and wkhtmltoimage dependencies and binaries
+RUN apt-get update && apt-get install -y \
+    wget \
+    fontconfig \
+    libfreetype6 \
+    libjpeg62-turbo \
+    libpng16-16t64 \
+    libssl3t64 \
+    libx11-6 \
+    libxcb1 \
+    libxext6 \
+    libxrender1 \
+    xfonts-base \
+    xfonts-75dpi \
+    ca-certificates \
+    && ARCH=$(dpkg --print-architecture) \
+    && wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox_0.12.6.1-3.bookworm_${ARCH}.deb \
+    && dpkg -i ./wkhtmltox_0.12.6.1-3.bookworm_${ARCH}.deb || apt-get install -f -y \
+    && dpkg -i ./wkhtmltox_0.12.6.1-3.bookworm_${ARCH}.deb \
+    && rm wkhtmltox_0.12.6.1-3.bookworm_${ARCH}.deb \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /var/cache/fontconfig \
+    && chmod 777 /var/cache/fontconfig
+
 # Copy Composer from official image
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
@@ -82,6 +106,11 @@ RUN chown -R www-data:www-data /var/www/html \
 
 # Configure working directory
 WORKDIR /var/www/html
+
+# Configure Fontconfig cache directory for wkhtmltopdf
+ENV FONTCONFIG_PATH=/etc/fonts
+ENV FONTCONFIG_FILE=/etc/fonts/fonts.conf
+ENV XDG_CACHE_HOME=/var/cache
 
 # Expose HTTP port
 EXPOSE 80
