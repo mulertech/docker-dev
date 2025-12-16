@@ -47,4 +47,15 @@ class Composer
             || str_contains($composer, 'symfony/symfony')
             || str_contains($composer, 'symfony/kernel');
     }
+
+    public function needsPgvectorAndOllama(): bool
+    {
+        $composer = file_get_contents($this->getProjectDir() . '/composer.json');
+        return str_contains($composer, 'pgvector')
+            || str_contains($composer, 'openai')
+            || str_contains($composer, 'anthropic')
+            || str_contains($composer, 'langchain')
+            || str_contains($composer, 'chromadb')
+            || str_contains($composer, 'yethee/tiktoken');
+    }
 }

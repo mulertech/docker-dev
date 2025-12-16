@@ -1,0 +1,94 @@
+services:
+  apache:
+    build:
+      context: .
+      dockerfile: php/Dockerfile
+      args:
+        USER_ID: ${USER_ID}
+        GROUP_ID: ${GROUP_ID}
+        PHP_IMAGE: ${PHP_IMAGE}
+        BUILDKIT_INLINE_CACHE: 1
+    container_name: ${CONTAINER_NAME_APACHE}
+    ports:
+      - "${APACHE_PORT}:80"
+    volumes:
+      - ../:/var/www/html
+      - ./php/php.ini:/usr/local/etc/php/php.ini
+      - ./php/apache.conf:/etc/apache2/sites-available/000-default.conf
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${DB_NAME}
+      - DATABASE_USER=${DB_USER}
+      - DATABASE_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - postgres
+      - ollama
+    networks:
+      - symfony-network
+
+  postgres:
+    image: "pgvector/pgvector:pg17-trixie"
+    container_name: ${CONTAINER_NAME_POSTGRES}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-user.sql:/docker-entrypoint-initdb.d/01-init-user.sql
+      - ./sql:/docker-entrypoint-initdb.d/user-sql
+    networks:
+      - symfony-network
+
+  adminer:
+    image: adminer:latest
+    container_name: ${CONTAINER_NAME_ADMINER}
+    ports:
+      - "${ADMINER_PORT}:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: pepa-linha-dark
+    volumes:
+      - ./adminer-index.php:/var/www/html/index.php:ro
+    depends_on:
+      - postgres
+    networks:
+      - symfony-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: ${CONTAINER_NAME_REDIS}
+    ports:
+      - "${REDIS_PORT}:6379"
+    networks:
+      - symfony-network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: ${CONTAINER_NAME_MAILPIT}
+    ports:
+      - "${MAILPIT_PORT}:8025"
+      - "${MAILPIT_SMTP_PORT}:1025"
+    networks:
+      - symfony-network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ${CONTAINER_NAME_OLLAMA}
+    ports:
+      - "${OLLAMA_PORT}:11434"
+    volumes:
+      - ./ollama:/root/.ollama
+    networks:
+      - symfony-network
+
+volumes:
+  postgres-data:
+  ollama-data:
+
+networks:
+  symfony-network:
+    driver: bridge

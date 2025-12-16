@@ -74,6 +74,7 @@ The primary feature of this package is to quickly set up complete development en
 
 # Or choose a specific template
 ./vendor/bin/mtdocker init symfony
+./vendor/bin/mtdocker init symfony-pgvector-ollama
 ./vendor/bin/mtdocker init apache-mysql  
 ./vendor/bin/mtdocker init apache-simple
 ./vendor/bin/mtdocker init apache-html
@@ -257,15 +258,17 @@ This command will display a clickable link to your application (e.g., http://loc
 ### Available Templates
 
 **Smart template auto-detection:**
-1. **Symfony projects** → `symfony` template (detects `symfony/framework-bundle`, `symfony/symfony`, or `symfony/kernel`)
-2. **Database projects** → `apache-mysql` template (detects `ext-pdo` requirement) 
-3. **Simple projects** → `apache-simple` template (fallback)
+1. **Symfony projects with AI/RAG** → `symfony-pgvector-ollama` template (detects AI packages: `pgvector`, `openai`, `anthropic`, `langchain`, `chromadb`, `yethee/tiktoken`)
+2. **Symfony projects** → `symfony` template (detects `symfony/framework-bundle`, `symfony/symfony`, or `symfony/kernel`)
+3. **Database projects** → `apache-mysql` template (detects `ext-pdo` requirement) 
+4. **Simple projects** → `apache-simple` template (fallback)
 
 **Available templates:**
 - `apache-simple`: Basic Apache + PHP environment for simple web projects
 - `apache-mysql`: Apache + PHP + MySQL environment for database-driven applications
 - `apache-html`: Pure Apache HTTP server for static HTML/CSS/JS projects (no PHP) - [Download template files](https://github.com/mulertech/docker-dev/tree/main/templates/apache-html)
-- `symfony`: Complete Symfony development environment with Apache, PostgreSQL, pgAdmin, Redis, and MailPit (automatically configures Doctrine for Docker environment)
+- `symfony`: Complete Symfony development environment with Apache, PostgreSQL 15, Adminer, Redis, and MailPit (automatically configures Doctrine for Docker environment)
+- `symfony-pgvector-ollama`: Advanced Symfony environment for AI/RAG projects with Apache, PostgreSQL 17 + pgvector extension, Ollama (local LLM), Adminer, Redis, and MailPit
 
 **Template initialization process:**
 - Creates a `.mtdocker/` directory in your project root
@@ -273,6 +276,7 @@ This command will display a clickable link to your application (e.g., http://loc
 - Creates a `.env` file with auto-detected system settings (USER_ID, GROUP_ID, PHP version)
 - Generates deterministic ports based on project name to avoid conflicts
 - **Automatically adds `.mtdocker/` to `.gitignore`** (best practice)
+- **For Symfony projects**: Interactive template selection with smart defaults based on detected AI/RAG packages
 - **Automatically configures Symfony projects** with Doctrine settings for PostgreSQL into `doctrine.yaml`
 - **Automatically configures Symfony Mailer** to use MailPit into `.env`
 - Provides a complete development environment ready to use

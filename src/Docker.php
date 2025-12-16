@@ -19,6 +19,9 @@ class Docker
     {
         // Priority 1: Symfony framework
         if ($this->composer->isSymfonyProject()) {
+            if ($this->composer->needsPgvectorAndOllama()) {
+                return 'symfony-pgvector-ollama';
+            }
             return 'symfony';
         }
 
@@ -81,7 +84,7 @@ class Docker
         if (!is_dir($templatesPath)) {
             echo "Error: Template '$template' not found.\n";
             if ($requireConfirmation) {
-                echo "Templates available: apache-simple, apache-mysql, symfony\n";
+                echo "Templates available: apache-simple, apache-mysql, symfony, symfony-pgvector-ollama\n";
             }
             return false;
         }
@@ -130,24 +133,25 @@ class Docker
             $envContent = str_replace('PHP_IMAGE=php:apache', "PHP_IMAGE=$phpImage", $envContent);
 
             // Generate container names based on project (for Symfony template)
-            if ($template === 'symfony') {
+            if ($template === 'symfony' || $template === 'symfony-pgvector-ollama') {
                 $apacheContainerName = $this->getContainerName();
                 $projectBaseName = $this->getProjectBaseName();
+                
+                $replacements = [
+                    'CONTAINER_NAME_APACHE=apache-php' => "CONTAINER_NAME_APACHE=$apacheContainerName",
+                    'CONTAINER_NAME_POSTGRES=postgres-db' => "CONTAINER_NAME_POSTGRES=$projectBaseName-postgres",
+                    'CONTAINER_NAME_ADMINER=symfony-adminer' => "CONTAINER_NAME_ADMINER=$projectBaseName-adminer",
+                    'CONTAINER_NAME_REDIS=symfony-redis' => "CONTAINER_NAME_REDIS=$projectBaseName-redis",
+                    'CONTAINER_NAME_MAILPIT=symfony-mailpit' => "CONTAINER_NAME_MAILPIT=$projectBaseName-mailpit"
+                ];
+                
+                if ($template === 'symfony-pgvector-ollama') {
+                    $replacements['CONTAINER_NAME_OLLAMA=symfony-ollama'] = "CONTAINER_NAME_OLLAMA=$projectBaseName-ollama";
+                }
+                
                 $envContent = str_replace(
-                    [
-                        'CONTAINER_NAME_APACHE=apache-php',
-                        'CONTAINER_NAME_POSTGRES=postgres-db',
-                        'CONTAINER_NAME_ADMINER=symfony-adminer',
-                        'CONTAINER_NAME_REDIS=symfony-redis',
-                        'CONTAINER_NAME_MAILPIT=symfony-mailpit'
-                    ],
-                    [
-                        "CONTAINER_NAME_APACHE=$apacheContainerName",
-                        "CONTAINER_NAME_POSTGRES=$projectBaseName-postgres",
-                        "CONTAINER_NAME_ADMINER=$projectBaseName-adminer",
-                        "CONTAINER_NAME_REDIS=$projectBaseName-redis",
-                        "CONTAINER_NAME_MAILPIT=$projectBaseName-mailpit"
-                    ],
+                    array_keys($replacements),
+                    array_values($replacements),
                     $envContent
                 );
             }
@@ -169,7 +173,7 @@ class Docker
         $this->addToGitignore();
 
         // Configure Symfony Doctrine if it's a Symfony template
-        if ($template === 'symfony') {
+        if ($template === 'symfony' || $template === 'symfony-pgvector-ollama') {
             $symfony = new Symfony($this->composer);
             $symfony->configureDoctrine();
             $symfony->configureMailer();
@@ -200,8 +204,28 @@ class Docker
 
     public function autoInitTemplate(): void
     {
-        // Auto-detect template based on project
-        $template = $this->detectTemplate();
+        // For Symfony projects, offer interactive choice
+        if ($this->composer->isSymfonyProject()) {
+            echo "Symfony project detected. Choose template:\n";
+            echo "  1) symfony (PostgreSQL 15 + Redis + MailPit)\n";
+            echo "  2) symfony-pgvector-ollama (PostgreSQL 17 + pgvector + Ollama + Redis + MailPit)\n";
+            
+            $autoDetected = $this->composer->needsPgvectorAndOllama() ? 2 : 1;
+            echo "Choice (1-2) [$autoDetected]: ";
+            
+            $handle = fopen("php://stdin", "r");
+            $choice = trim(fgets($handle));
+            fclose($handle);
+            
+            if ($choice === '') {
+                $choice = (string)$autoDetected;
+            }
+            
+            $template = ($choice === '2') ? 'symfony-pgvector-ollama' : 'symfony';
+        } else {
+            // Auto-detect template based on project
+            $template = $this->detectTemplate();
+        }
 
         // Use the common initialization function without confirmation
         $this->performTemplateInitialization($template);
@@ -306,6 +330,9 @@ class Docker
         }
         if (str_contains($envContent, 'MAILPIT_SMTP_PORT=')) {
             $ports['MAILPIT_SMTP_PORT'] = $this->generatePortFromName($projectName . '-mailpit-smtp');
+        }
+        if (str_contains($envContent, 'OLLAMA_PORT=')) {
+            $ports['OLLAMA_PORT'] = $this->generatePortFromName($projectName . '-ollama');
         }
 
         foreach ($ports as $varName => $port) {
