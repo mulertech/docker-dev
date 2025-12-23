@@ -20,5 +20,8 @@
   },
   "bin": [
     "mtdocker"
-  ]
+  ],
+  "prefer-install": {
+    "*": "source"
+  }
 }
