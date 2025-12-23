@@ -18,6 +18,7 @@ class CommandRegistry
         $this->registerCommand(new PhpunitCommand($docker));
         $this->registerCommand(new PhpStanCommand($docker));
         $this->registerCommand(new CsFixerCommand($docker));
+        $this->registerCommand(new ComposerCommand($docker));
         $this->registerCommand(new SymfonyCommand($docker, $composer));
     }
 

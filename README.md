@@ -194,6 +194,33 @@ This command will:
 - Run php-cs-fixer in the container with all provided arguments.
 - Stop the container if it was not running before php-cs-fixer was executed.
 
+### Composer Commands
+
+You can run Composer commands directly in the Docker container:
+
+```sh
+# Install dependencies
+./vendor/bin/mtdocker composer install
+
+# Update dependencies
+./vendor/bin/mtdocker composer update
+
+# Require a new package
+./vendor/bin/mtdocker composer require vendor/package
+
+# Remove a package
+./vendor/bin/mtdocker composer remove vendor/package
+
+# Any other Composer command
+./vendor/bin/mtdocker composer [command] [arguments...]
+```
+
+This command will:
+- Check if the Docker container is running.
+- If the container is not running, it will be started.
+- Run `composer [command]` in the container with all provided arguments.
+- Stop the container if it was not running before the command was executed.
+
 ### Symfony Console Commands (Symfony projects only)
 
 For Symfony projects, you can run console commands directly in the container:
@@ -334,7 +361,7 @@ Configure PHPStorm to work with your Docker development environment:
 ### Command System
 - **`CommandInterface`**: Contract for all commands
 - **`BaseCommand`**: Abstract base with Docker lifecycle management
-- **Specific Commands**: `PhpunitCommand`, `PhpStanCommand`, `CsFixerCommand`, `SymfonyCommand`
+- **Specific Commands**: `PhpunitCommand`, `PhpStanCommand`, `CsFixerCommand`, `ComposerCommand`, `SymfonyCommand`
 - **`CommandRegistry`**: Command routing and management
 
 ### Key Features

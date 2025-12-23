@@ -59,6 +59,9 @@ class Application
             case 'symfony':
                 $this->handleSymfony($args);
                 break;
+            case 'composer':
+                $this->handleComposer($args);
+                break;
             case 'link':
                 $this->handleLink();
                 break;
@@ -137,6 +140,12 @@ class Application
         // Get command arguments starting from index 2 (after 'symfony')
         $consoleArgs = array_slice($args, 2);
         $this->commandRegistry->executeCommand('symfony', $consoleArgs);
+    }
+
+    private function handleComposer(array $args): void
+    {
+        $consoleArgs = array_slice($args, 2);
+        $this->commandRegistry->executeCommand('composer', $consoleArgs);
     }
 
     private function handleLink(): void
