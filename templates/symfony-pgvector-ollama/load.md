@@ -22,3 +22,9 @@ To test email sending functionality, use the command:
 ```bash
 ./vendor/bin/mtdocker symfony mail:test someone@example.com
 ```
+
+## To reload the database with vector extension
+If you need to reload the database and ensure the vector extension is enabled, use the following command:
+```bash
+./vendor/bin/mtdocker symfony dbal:run-sql "CREATE EXTENSION IF NOT EXISTS vector" --env=test
+```
