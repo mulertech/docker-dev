@@ -29,6 +29,9 @@ class Application
             case 'test-coverage':
                 $this->handleTestCoverage();
                 break;
+            case 'test-coverage-text':
+                $this->handleTestCoverageText();
+                break;
             case 'test':
                 $this->handleTest($args);
                 break;
@@ -71,6 +74,11 @@ class Application
     private function handleTestCoverage(): void
     {
         $this->commandRegistry->executeCommand('test', ['--coverage-html', './.phpunit.cache/coverage']);
+    }
+
+    private function handleTestCoverageText(): void
+    {
+        $this->commandRegistry->executeCommand('test', ['--coverage-text', '--colors=never']);
     }
 
     private function handleTest(array $args): void

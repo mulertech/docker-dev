@@ -3,6 +3,7 @@
 ## Build/Test/Lint Commands
 - Run all tests: `./vendor/bin/mtdocker test`
 - Run tests with coverage: `./vendor/bin/mtdocker test-coverage`
+- Run tests with text coverage (AI-readable): `./vendor/bin/mtdocker test-coverage-text`
 - Run PHPStan analysis: `./vendor/bin/mtdocker phpstan`
 - Run PHP CS Fixer: `./vendor/bin/mtdocker cs-fixer`
 - Run all checks: `./vendor/bin/mtdocker all` (runs cs-fixer, test, phpstan)

@@ -140,6 +140,14 @@ To run the tests with code coverage, use the following command:
 
 The code coverage report will be generated in the `./.phpunit.cache/coverage` folder.
 
+To get a plain text coverage report (useful for CI or AI agents):
+
+```sh
+./vendor/bin/mtdocker test-coverage-text
+```
+
+The coverage report will be displayed directly in the terminal as plain text without colors.
+
 These commands will:
 - Check if the Docker container is running.
 - If the container is not running, it will be started.
