@@ -9,7 +9,7 @@ To load the database after building your Docker container, you can use the follo
 
 ## Download Models (replace mulertech-ollama with your container name)
 docker exec mulertech-ollama ollama pull nomic-embed-text
-docker exec mulertech-ollama ollama pull gemma3:4b
+docker exec mulertech-ollama ollama pull qwen2.5:0.5b
 
 ## Start worker
 To start the worker, use the command:

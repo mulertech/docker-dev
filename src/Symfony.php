@@ -38,7 +38,7 @@ class Symfony
         port: '%env(default::DATABASE_PORT)%'
         dbname: '%env(default::DATABASE_NAME)%'
         user: '%env(default::DATABASE_USER)%'
-        password: '%env(file:DATABASE_PASSWORD_FILE)%'
+        password: '%env(trim:file:DATABASE_PASSWORD_FILE)%'
         driver: 'pdo_pgsql'";
 
         $updatedContent = str_replace($oldConfig, $newConfig, $doctrineContent);
@@ -68,7 +68,7 @@ class Symfony
         // Replace the MAILER_DSN env var with file-based secret
         $oldConfig = "dsn: '%env(MAILER_DSN)%'";
         $newConfig = "# Modified by mulertech/docker-dev package for Docker environment
-            dsn: '%env(file:MAILER_DSN_FILE)%'";
+            dsn: '%env(trim:file:MAILER_DSN_FILE)%'";
 
         $updatedContent = str_replace($oldConfig, $newConfig, $mailerContent);
 
