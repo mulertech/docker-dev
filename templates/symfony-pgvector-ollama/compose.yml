@@ -20,7 +20,11 @@ services:
       - DATABASE_PORT=5432
       - DATABASE_NAME=${DB_NAME}
       - DATABASE_USER=${DB_USER}
-      - DATABASE_PASSWORD=${DB_PASSWORD}
+      - DATABASE_PASSWORD_FILE=/run/secrets/db_password
+      - MAILER_DSN_FILE=/run/secrets/mailer_dsn
+    secrets:
+      - db_password
+      - mailer_dsn
     depends_on:
       - postgres
       - ollama
@@ -84,6 +88,12 @@ services:
       - ./ollama:/root/.ollama
     networks:
       - symfony-network
+
+secrets:
+  db_password:
+    file: ./secrets/db_password
+  mailer_dsn:
+    file: ./secrets/mailer_dsn
 
 volumes:
   postgres-data:

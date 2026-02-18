@@ -38,7 +38,7 @@ class Symfony
         port: '%env(default::DATABASE_PORT)%'
         dbname: '%env(default::DATABASE_NAME)%'
         user: '%env(default::DATABASE_USER)%'
-        password: '%env(default::DATABASE_PASSWORD)%'
+        password: '%env(file:DATABASE_PASSWORD_FILE)%'
         driver: 'pdo_pgsql'";
 
         $updatedContent = str_replace($oldConfig, $newConfig, $doctrineContent);
@@ -52,22 +52,29 @@ class Symfony
     public function configureMailer(): void
     {
         $projectDir = $this->composer->getProjectDir();
-        $envPath = $projectDir . '/.env';
+        $mailerPath = $projectDir . '/config/packages/mailer.yaml';
 
-        if (!file_exists($envPath)) {
-            return; // Skip if .env doesn't exist
+        if (!file_exists($mailerPath)) {
+            return; // Skip if mailer.yaml doesn't exist
         }
 
-        $envContent = file_get_contents($envPath);
+        $mailerContent = file_get_contents($mailerPath);
 
-        // Check if MAILER_DSN exists and update it to use MailPit
-        if (str_contains($envContent, 'MAILER_DSN=null://null')) {
-            $updatedContent = str_replace('MAILER_DSN=null://null', 'MAILER_DSN=smtp://mailpit:1025', $envContent);
+        // Check if already modified (avoid duplicate modifications)
+        if (str_contains($mailerContent, "# Modified by mulertech/docker-dev package for Docker environment")) {
+            return; // Already configured
+        }
 
-            if ($updatedContent !== $envContent) {
-                file_put_contents($envPath, $updatedContent);
-                echo "Updated .env MAILER_DSN for MailPit integration\n";
-            }
+        // Replace the MAILER_DSN env var with file-based secret
+        $oldConfig = "dsn: '%env(MAILER_DSN)%'";
+        $newConfig = "# Modified by mulertech/docker-dev package for Docker environment
+            dsn: '%env(file:MAILER_DSN_FILE)%'";
+
+        $updatedContent = str_replace($oldConfig, $newConfig, $mailerContent);
+
+        if ($updatedContent !== $mailerContent) {
+            file_put_contents($mailerPath, $updatedContent);
+            echo "Updated config/packages/mailer.yaml for Docker environment\n";
         }
     }
 }
