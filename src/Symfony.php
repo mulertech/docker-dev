@@ -34,10 +34,7 @@ class Symfony
         // Replace the DATABASE_URL configuration with flexible fallback configuration
         $oldConfig = "url: '%env(resolve:DATABASE_URL)%'";
         $newConfig = "# Modified by mulertech/docker-dev package for Docker environment
-        host: '%env(default::DATABASE_HOST)%'
-        port: '%env(default::DATABASE_PORT)%'
-        dbname: '%env(default::DATABASE_NAME)%'
-        user: '%env(default::DATABASE_USER)%'
+        url: '%env(DATABASE_URL)%'
         password: '%env(trim:file:DATABASE_PASSWORD_FILE)%'
         driver: 'pdo_pgsql'";
 
