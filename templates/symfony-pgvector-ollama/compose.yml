@@ -16,9 +16,12 @@ services:
       - ./php/php.ini:/usr/local/etc/php/php.ini
       - ./php/apache.conf:/etc/apache2/sites-available/000-default.conf
     environment:
-      DATABASE_URL: "postgresql://${DB_USER}@postgres:5432/${DB_NAME}?serverVersion=${POSTGRES_VERSION}&charset=utf8"
-      DATABASE_PASSWORD_FILE: /run/secrets/db_password
-      MAILER_DSN_FILE: /run/secrets/mailer_dsn
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${DB_NAME}
+      - DATABASE_USER=${DB_USER}
+      - DATABASE_PASSWORD_FILE=/run/secrets/db_password
+      - MAILER_DSN_FILE=/run/secrets/mailer_dsn
     secrets:
       - db_password
       - mailer_dsn
@@ -29,7 +32,7 @@ services:
       - symfony-network
 
   postgres:
-    image: "pgvector/pgvector:pg${POSTGRES_VERSION}-trixie"
+    image: "pgvector/pgvector:pg17-trixie"
     container_name: ${CONTAINER_NAME_POSTGRES}
     ports:
       - "${POSTGRES_PORT}:5432"
