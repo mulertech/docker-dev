@@ -28,7 +28,6 @@ class CsFixerCommand extends BaseCommand
         $containerName = $this->docker->getContainerName();
         $ttyFlag = (posix_isatty(STDIN)) ? '-it ' : '-i ';
         $cmd = 'docker exec ' . $ttyFlag . $containerName . ' ./vendor/bin/php-cs-fixer' . ' ' . $this->buildCommand($this->getDefaultArgs(), $customArgs);
-        $output = shell_exec($cmd);
-        echo $output;
+        passthru($cmd);
     }
 }

@@ -29,8 +29,7 @@ class PhpunitCommand extends BaseCommand
         $ttyFlag = (posix_isatty(STDIN)) ? '-it ' : '-i ';
         $envFlags = $this->needsCoverage($customArgs) ? '-e XDEBUG_MODE=coverage ' : '';
         $cmd = 'docker exec ' . $envFlags . $ttyFlag . $containerName . ' ./vendor/bin/phpunit' . ' ' . $this->buildCommand($this->getDefaultArgs(), $customArgs);
-        $output = shell_exec($cmd);
-        echo $output;
+        passthru($cmd);
     }
 
     private function needsCoverage(array $args): bool
