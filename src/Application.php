@@ -182,6 +182,6 @@ class Application
     private function handleLink(): void
     {
         $this->docker->ensureEnvironment();
-        $this->docker->displayApacheLink();
+        $this->docker->displayWebLink();
     }
 }

@@ -1,5 +1,5 @@
 services:
-  apache:
+  web:
     depends_on:
       - ollama
 

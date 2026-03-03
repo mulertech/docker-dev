@@ -1,5 +1,5 @@
 services:
-  apache:
+  web:
     environment:
       - DATABASE_HOST=mysql
       - DATABASE_PORT=3306

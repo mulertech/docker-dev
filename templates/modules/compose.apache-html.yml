@@ -1,14 +1,14 @@
 services:
-  apache:
+  web:
     build:
       context: ${MTDOCKER_PATH}
       dockerfile: html/Dockerfile
       args:
         USER_ID: ${USER_ID}
         GROUP_ID: ${GROUP_ID}
-    container_name: ${CONTAINER_NAME_APACHE}
+    container_name: ${CONTAINER_NAME_WEB}
     ports:
-      - "${APACHE_PORT}:80"
+      - "${WEB_PORT}:80"
     volumes:
       - ${PROJECT_PATH}:/usr/local/apache2/htdocs
     networks:

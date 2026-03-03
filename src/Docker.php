@@ -196,7 +196,7 @@ class Docker
         $phpVersion = $this->composer->getPhpVersion();
         $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'apache';
         $projectBaseName = $this->getProjectBaseName();
-        $apacheContainerName = $this->getContainerName();
+        $webContainerName = $this->getContainerName();
 
         $lines = [];
         $lines[] = '# =================================';
@@ -229,7 +229,7 @@ class Docker
         $lines[] = '# =================================';
         $lines[] = '# CONTAINERS CONFIGURATION';
         $lines[] = '# =================================';
-        $lines[] = "CONTAINER_NAME_APACHE=$apacheContainerName";
+        $lines[] = "CONTAINER_NAME_WEB=$webContainerName";
 
         if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true)) {
             $lines[] = "CONTAINER_NAME_POSTGRES=$projectBaseName-postgres";
@@ -249,6 +249,9 @@ class Docker
         if (in_array('ollama', $modules, true)) {
             $lines[] = "CONTAINER_NAME_OLLAMA=$projectBaseName-ollama";
         }
+        if (in_array('gotenberg', $modules, true)) {
+            $lines[] = "CONTAINER_NAME_GOTENBERG=$projectBaseName-gotenberg";
+        }
 
         $lines[] = '';
         $lines[] = '# =================================';
@@ -256,9 +259,9 @@ class Docker
         $lines[] = '# =================================';
 
         $projectName = $projectBaseName;
-        $apachePort = $this->generatePortFromName($projectName);
-        $lines[] = "# Apache web server (http://localhost:$apachePort)";
-        $lines[] = "APACHE_PORT=$apachePort";
+        $webPort = $this->generatePortFromName($projectName);
+        $lines[] = "# Web server (http://localhost:$webPort)";
+        $lines[] = "WEB_PORT=$webPort";
 
         if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true)) {
             $port = $this->generatePortFromName($projectName . '-postgres');
@@ -310,6 +313,22 @@ class Docker
             $lines[] = 'DB_USER=user';
             $lines[] = 'DB_PASSWORD=password';
             $lines[] = 'DB_ROOT_PASSWORD=root';
+        }
+
+        if ($this->composer->needsWkhtmltopdf()) {
+            $lines[] = '';
+            $lines[] = '# =================================';
+            $lines[] = '# PDF GENERATION (wkhtmltopdf)';
+            $lines[] = '# =================================';
+            $lines[] = 'INSTALL_WKHTMLTOPDF=1';
+        }
+
+        if (in_array('gotenberg', $modules, true)) {
+            $lines[] = '';
+            $lines[] = '# =================================';
+            $lines[] = '# PDF GENERATION (Gotenberg)';
+            $lines[] = '# =================================';
+            $lines[] = "GOTENBERG_URL=http://gotenberg:3000";
         }
 
         $envContent = implode("\n", $lines) . "\n";
@@ -369,14 +388,14 @@ class Docker
         return $envVars . 'docker compose --env-file ' . $mtdockerPath . DIRECTORY_SEPARATOR . '.env' . $composeFiles . ' --project-name ' . $this->getProjectName();
     }
 
-    public function getApachePort(): int
+    public function getWebPort(): int
     {
         $projectDir = $this->composer->getProjectDir();
         $envPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker' . DIRECTORY_SEPARATOR . '.env';
 
         if (file_exists($envPath)) {
             $envContent = file_get_contents($envPath);
-            if (preg_match('/APACHE_PORT=(\d+)/', $envContent, $matches)) {
+            if (preg_match('/WEB_PORT=(\d+)/', $envContent, $matches)) {
                 return (int)$matches[1];
             }
         }
@@ -384,10 +403,10 @@ class Docker
         return 8080;
     }
 
-    public function displayApacheLink(): void
+    public function displayWebLink(): void
     {
-        $port = $this->getApachePort();
-        echo "\n🚀 Apache server is running at: \033]8;;http://localhost:$port\033\\http://localhost:$port\033]8;;\033\\\n\n";
+        $port = $this->getWebPort();
+        echo "\n🚀 Web server is running at: \033]8;;http://localhost:$port\033\\http://localhost:$port\033]8;;\033\\\n\n";
     }
 
     public function dockerComposeUp(string $arg2): void
@@ -405,7 +424,7 @@ class Docker
 
             if ($exitCode === 0) {
                 echo "\n✅ All containers started successfully!\n";
-                $this->displayApacheLink();
+                $this->displayWebLink();
             } else {
                 echo "\n❌ Error starting containers (exit code: $exitCode)\n";
             }

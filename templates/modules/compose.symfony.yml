@@ -1,5 +1,5 @@
 services:
-  apache:
+  web:
     volumes:
       - ${MTDOCKER_PATH}/php/php.ini:/usr/local/etc/php/php.ini
       - ${MTDOCKER_PATH}/php/apache.conf:/etc/apache2/sites-available/000-default.conf

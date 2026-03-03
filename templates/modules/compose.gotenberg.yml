@@ -1,0 +1,12 @@
+services:
+  web:
+    depends_on:
+      - gotenberg
+    environment:
+      - GOTENBERG_URL=${GOTENBERG_URL}
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: ${CONTAINER_NAME_GOTENBERG}
+    networks:
+      - mtdocker-network

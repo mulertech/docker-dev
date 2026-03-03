@@ -1,5 +1,5 @@
 services:
-  apache:
+  web:
     environment:
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432

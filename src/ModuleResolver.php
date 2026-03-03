@@ -33,6 +33,10 @@ class ModuleResolver
             $modules[] = 'redis';
             $modules[] = 'mailpit';
             $modules[] = 'adminer';
+
+            if ($this->composer->needsGotenberg()) {
+                $modules[] = 'gotenberg';
+            }
         } elseif ($this->composer->dbNeeded()) {
             $modules[] = 'frankenphp';
             $modules[] = 'postgres';
@@ -166,6 +170,7 @@ class ModuleResolver
             'mailpit',
             'adminer',
             'ollama',
+            'gotenberg',
         ];
     }
 

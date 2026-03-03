@@ -58,4 +58,16 @@ class Composer
             || str_contains($composer, 'chromadb')
             || str_contains($composer, 'yethee/tiktoken');
     }
+
+    public function needsWkhtmltopdf(): bool
+    {
+        $composer = file_get_contents($this->getProjectDir() . '/composer.json');
+        return str_contains($composer, 'knplabs/knp-snappy-bundle');
+    }
+
+    public function needsGotenberg(): bool
+    {
+        $composer = file_get_contents($this->getProjectDir() . '/composer.json');
+        return str_contains($composer, 'sensiolabs/gotenberg-bundle');
+    }
 }
