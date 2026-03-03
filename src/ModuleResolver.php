@@ -117,6 +117,7 @@ class ModuleResolver
 
         if (in_array('symfony', $modules, true)) {
             $files['secrets/mailer_dsn'] = 'secrets/mailer_dsn';
+            $files['load.md'] = 'load.md';
         }
 
         if (in_array('adminer', $modules, true)) {
