@@ -9,29 +9,17 @@ namespace MulerTech\DockerDev;
 class Docker
 {
     private Composer $composer;
+    private ModuleResolver $moduleResolver;
 
     public function __construct(Composer $composer)
     {
         $this->composer = $composer;
+        $this->moduleResolver = new ModuleResolver($composer);
     }
 
-    public function detectTemplate(): string
+    public function getModuleResolver(): ModuleResolver
     {
-        // Priority 1: Symfony framework
-        if ($this->composer->isSymfonyProject()) {
-            if ($this->composer->needsPgvectorAndOllama()) {
-                return 'symfony-pgvector-ollama';
-            }
-            return 'symfony';
-        }
-
-        // Priority 2: Database needed
-        if ($this->composer->dbNeeded()) {
-            return 'apache-mysql';
-        }
-
-        // Priority 3: Simple Apache + PHP
-        return 'apache-simple';
+        return $this->moduleResolver;
     }
 
     public function getContainerName(): string
@@ -58,38 +46,43 @@ class Docker
         if (file_exists($gitignorePath)) {
             $gitignoreContent = file_get_contents($gitignorePath);
 
-            // Check if .mtdocker is already ignored
             if (!str_contains($gitignoreContent, '.mtdocker')) {
                 $addition = "\n# Docker development environment\n.mtdocker/\n";
                 file_put_contents($gitignorePath, $addition, FILE_APPEND);
                 echo "Added .mtdocker/ to .gitignore\n";
             }
         } else {
-            // Create .gitignore with .mtdocker entry
             $content = "# Docker development environment\n.mtdocker/\n";
             file_put_contents($gitignorePath, $content);
             echo "Created .gitignore with .mtdocker/ entry\n";
         }
     }
 
-    public function performTemplateInitialization(
-        string $template,
+    public function getModulesPath(): string
+    {
+        return __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . 'modules';
+    }
+
+    public function getSharedPath(): string
+    {
+        return __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . 'shared';
+    }
+
+    public function performModuleInitialization(
+        array $modules,
         bool $requireConfirmation = false,
         bool $showSuccessMessage = true
     ): bool {
-        $projectDir = $this->composer->getProjectDir();
-        $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
-        $templatesPath = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $template;
-
-        if (!is_dir($templatesPath)) {
-            echo "Error: Template '$template' not found.\n";
-            if ($requireConfirmation) {
-                echo "Templates available: apache-simple, apache-mysql, symfony, symfony-pgvector-ollama\n";
-            }
+        $invalid = $this->moduleResolver->validateModules($modules);
+        if ($invalid !== []) {
+            echo "Error: Unknown module(s): " . implode(', ', $invalid) . "\n";
+            echo "Available modules: " . implode(', ', ModuleResolver::availableModules()) . "\n";
             return false;
         }
 
-        // Handle existing directory with confirmation if required
+        $projectDir = $this->composer->getProjectDir();
+        $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
+
         if (is_dir($mtdockerPath) && $requireConfirmation) {
             echo ".mtdocker directory already exists. Do you want to replace it? (y/N): ";
             $handle = fopen("php://stdin", "r");
@@ -102,144 +95,278 @@ class Docker
             }
 
             exec("rm -rf " . escapeshellarg($mtdockerPath));
-        } elseif (!is_dir($mtdockerPath)) {
-            // Create .mtdocker directory if it doesn't exist
+        }
+
+        if (!is_dir($mtdockerPath)) {
             mkdir($mtdockerPath, 0755, true);
         }
 
-        // Copy template files (including hidden files)
-        exec("cp -r " . escapeshellarg($templatesPath) . "/. " . escapeshellarg($mtdockerPath) . " 2>/dev/null || true");
-        exec("cp -r " . escapeshellarg($templatesPath) . "/* " . escapeshellarg($mtdockerPath) . " 2>/dev/null || true");
-
-        // Process .env file from .env.example
-        $envExamplePath = $mtdockerPath . DIRECTORY_SEPARATOR . '.env.example';
-        $envPath = $mtdockerPath . DIRECTORY_SEPARATOR . '.env';
-
-        if (file_exists($envExamplePath)) {
-            $envContent = file_get_contents($envExamplePath);
-
-            // Auto-detect USER_ID and GROUP_ID
-            $uid = getmyuid();
-            $gid = getmygid();
-            $envContent = str_replace(
-                    ['USER_ID=1000', 'GROUP_ID=1000'],
-                    ["USER_ID=$uid", "GROUP_ID=$gid"],
-                    $envContent
-            );
-
-            // Auto-detect PHP version and image
-            $phpVersion = $this->composer->getPhpVersion();
-            $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'apache';
-            $envContent = str_replace('PHP_IMAGE=php:apache', "PHP_IMAGE=$phpImage", $envContent);
-
-            // Generate container names based on project (for Symfony template)
-            if ($template === 'symfony' || $template === 'symfony-pgvector-ollama') {
-                $apacheContainerName = $this->getContainerName();
-                $projectBaseName = $this->getProjectBaseName();
-                
-                $replacements = [
-                    'CONTAINER_NAME_APACHE=apache-php' => "CONTAINER_NAME_APACHE=$apacheContainerName",
-                    'CONTAINER_NAME_POSTGRES=postgres-db' => "CONTAINER_NAME_POSTGRES=$projectBaseName-postgres",
-                    'CONTAINER_NAME_ADMINER=symfony-adminer' => "CONTAINER_NAME_ADMINER=$projectBaseName-adminer",
-                    'CONTAINER_NAME_REDIS=symfony-redis' => "CONTAINER_NAME_REDIS=$projectBaseName-redis",
-                    'CONTAINER_NAME_MAILPIT=symfony-mailpit' => "CONTAINER_NAME_MAILPIT=$projectBaseName-mailpit"
-                ];
-                
-                if ($template === 'symfony-pgvector-ollama') {
-                    $replacements['CONTAINER_NAME_OLLAMA=symfony-ollama'] = "CONTAINER_NAME_OLLAMA=$projectBaseName-ollama";
-                }
-                
-                $envContent = str_replace(
-                    array_keys($replacements),
-                    array_values($replacements),
-                    $envContent
-                );
+        $dirs = $this->moduleResolver->resolveDirectoriesToCreate($modules);
+        foreach ($dirs as $dir) {
+            $dirPath = $mtdockerPath . DIRECTORY_SEPARATOR . $dir;
+            if (!is_dir($dirPath)) {
+                mkdir($dirPath, 0755, true);
             }
-
-            // Generate available ports
-            $envContent = $this->generateAvailablePorts($envContent);
-
-            file_put_contents($envPath, $envContent);
-
-            if ($requireConfirmation) {
-                echo ".env file created with your system settings.\n";
-            }
-
-            // Remove .env.example after processing
-            unlink($envExamplePath);
         }
 
-        // Add .mtdocker to .gitignore
+        $sharedPath = $this->getSharedPath();
+        $filesToCopy = $this->moduleResolver->resolveFilesToCopy($modules);
+
+        foreach ($filesToCopy as $source => $target) {
+            $sourcePath = $sharedPath . DIRECTORY_SEPARATOR . $source;
+            $targetPath = $mtdockerPath . DIRECTORY_SEPARATOR . $target;
+
+            $targetDir = dirname($targetPath);
+            if (!is_dir($targetDir)) {
+                mkdir($targetDir, 0755, true);
+            }
+
+            if (file_exists($sourcePath)) {
+                copy($sourcePath, $targetPath);
+            }
+        }
+
+        $this->generateEnvFile($modules, $mtdockerPath);
+
+        $this->saveModuleConfig($modules, $mtdockerPath);
+
         $this->addToGitignore();
 
-        // Configure Symfony Doctrine if it's a Symfony template
-        if ($template === 'symfony' || $template === 'symfony-pgvector-ollama') {
+        if (in_array('symfony', $modules, true)) {
             $symfony = new Symfony($this->composer);
             $symfony->configureDoctrine();
             $symfony->configureMailer();
         }
 
         if ($showSuccessMessage) {
+            $moduleList = implode(', ', $modules);
             if ($requireConfirmation) {
-                echo "Template '$template' initialized successfully in .mtdocker/\n";
+                echo "Modules [$moduleList] initialized successfully in .mtdocker/\n";
                 echo "You can now use: ./vendor/bin/mtdocker up -d\n";
             } else {
-                echo "Auto-initialized '$template' template.\n";
+                echo "Auto-initialized modules: $moduleList\n";
             }
         }
 
         return true;
     }
 
+    public function autoInitModules(bool $requireConfirmation = false): void
+    {
+        $modules = $this->moduleResolver->detectModules();
+        echo "Auto-detected modules: " . implode(', ', $modules) . "\n";
+
+        $this->performModuleInitialization($modules, $requireConfirmation);
+    }
+
     public function ensureEnvironment(): void
     {
         $projectDir = $this->composer->getProjectDir();
         $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
+        $modulesJsonPath = $mtdockerPath . DIRECTORY_SEPARATOR . 'modules.json';
+        $oldComposePath = $mtdockerPath . DIRECTORY_SEPARATOR . 'compose.yml';
 
-        if (!file_exists($mtdockerPath . DIRECTORY_SEPARATOR . 'compose.yml')) {
-            echo "No .mtdocker environment found. Initializing...\n";
-            $this->autoInitTemplate();
+        if (file_exists($modulesJsonPath)) {
+            return;
         }
+
+        if (file_exists($oldComposePath)) {
+            echo "Legacy template detected in .mtdocker/. Re-initialization required for module system.\n";
+            echo "Do you want to re-initialize? (y/N): ";
+            $handle = fopen("php://stdin", "r");
+            $response = trim(fgets($handle));
+            fclose($handle);
+
+            if (strtolower($response) === 'y') {
+                exec("rm -rf " . escapeshellarg($mtdockerPath));
+            } else {
+                echo "Cannot continue without module configuration. Please run: mtdocker init\n";
+                exit(1);
+            }
+        }
+
+        echo "No .mtdocker environment found. Initializing...\n";
+        $this->autoInitModules();
     }
 
-    public function autoInitTemplate(): void
+    public function generateEnvFile(array $modules, string $mtdockerPath): void
     {
-        // For Symfony projects, offer interactive choice
-        if ($this->composer->isSymfonyProject()) {
-            echo "Symfony project detected. Choose template:\n";
-            echo "  1) symfony (PostgreSQL 15 + Redis + MailPit)\n";
-            echo "  2) symfony-pgvector-ollama (PostgreSQL 17 + pgvector + Ollama + Redis + MailPit)\n";
-            
-            $autoDetected = $this->composer->needsPgvectorAndOllama() ? 2 : 1;
-            echo "Choice (1-2) [$autoDetected]: ";
-            
-            $handle = fopen("php://stdin", "r");
-            $choice = trim(fgets($handle));
-            fclose($handle);
-            
-            if ($choice === '') {
-                $choice = (string)$autoDetected;
-            }
-            
-            $template = ($choice === '2') ? 'symfony-pgvector-ollama' : 'symfony';
-        } else {
-            // Auto-detect template based on project
-            $template = $this->detectTemplate();
+        $uid = getmyuid();
+        $gid = getmygid();
+        $phpVersion = $this->composer->getPhpVersion();
+        $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'apache';
+        $projectBaseName = $this->getProjectBaseName();
+        $apacheContainerName = $this->getContainerName();
+
+        $lines = [];
+        $lines[] = '# =================================';
+        $lines[] = '# USER CONFIGURATION';
+        $lines[] = '# =================================';
+        $lines[] = "USER_ID=$uid";
+        $lines[] = "GROUP_ID=$gid";
+        $lines[] = '';
+        $lines[] = '# =================================';
+        $lines[] = '# DOCKER OPTIMIZATION';
+        $lines[] = '# =================================';
+        $lines[] = 'DOCKER_BUILDKIT=1';
+        $lines[] = 'COMPOSE_DOCKER_CLI_BUILD=1';
+
+        if (in_array('frankenphp', $modules, true)) {
+            $frankenphpImage = 'dunglas/frankenphp:' . ($phpVersion === '' ? 'latest' : 'php' . $phpVersion);
+            $lines[] = "FRANKENPHP_IMAGE=$frankenphpImage";
+        } elseif (!in_array('apache-html', $modules, true)) {
+            $lines[] = "PHP_IMAGE=$phpImage";
         }
 
-        // Use the common initialization function without confirmation
-        $this->performTemplateInitialization($template);
+        $lines[] = '';
+        $lines[] = '# =================================';
+        $lines[] = '# PATHS (absolute, for compose modules)';
+        $lines[] = '# =================================';
+        $lines[] = "MTDOCKER_PATH=$mtdockerPath";
+        $lines[] = "PROJECT_PATH=" . $this->composer->getProjectDir();
+
+        $lines[] = '';
+        $lines[] = '# =================================';
+        $lines[] = '# CONTAINERS CONFIGURATION';
+        $lines[] = '# =================================';
+        $lines[] = "CONTAINER_NAME_APACHE=$apacheContainerName";
+
+        if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true)) {
+            $lines[] = "CONTAINER_NAME_POSTGRES=$projectBaseName-postgres";
+        }
+        if (in_array('mysql', $modules, true)) {
+            $lines[] = "CONTAINER_NAME_MYSQL=$projectBaseName-mysql";
+        }
+        if (in_array('adminer', $modules, true)) {
+            $lines[] = "CONTAINER_NAME_ADMINER=$projectBaseName-adminer";
+        }
+        if (in_array('redis', $modules, true)) {
+            $lines[] = "CONTAINER_NAME_REDIS=$projectBaseName-redis";
+        }
+        if (in_array('mailpit', $modules, true)) {
+            $lines[] = "CONTAINER_NAME_MAILPIT=$projectBaseName-mailpit";
+        }
+        if (in_array('ollama', $modules, true)) {
+            $lines[] = "CONTAINER_NAME_OLLAMA=$projectBaseName-ollama";
+        }
+
+        $lines[] = '';
+        $lines[] = '# =================================';
+        $lines[] = '# PORTS CONFIGURATION';
+        $lines[] = '# =================================';
+
+        $projectName = $projectBaseName;
+        $apachePort = $this->generatePortFromName($projectName);
+        $lines[] = "# Apache web server (http://localhost:$apachePort)";
+        $lines[] = "APACHE_PORT=$apachePort";
+
+        if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true)) {
+            $port = $this->generatePortFromName($projectName . '-postgres');
+            $lines[] = "# PostgreSQL (localhost:$port)";
+            $lines[] = "POSTGRES_PORT=$port";
+        }
+        if (in_array('mysql', $modules, true)) {
+            $port = $this->generatePortFromName($projectName . '-mysql');
+            $lines[] = "# MySQL (localhost:$port)";
+            $lines[] = "MYSQL_PORT=$port";
+        }
+        if (in_array('adminer', $modules, true)) {
+            $port = $this->generatePortFromName($projectName . '-adminer');
+            $lines[] = "# Adminer (http://localhost:$port)";
+            $lines[] = "ADMINER_PORT=$port";
+        }
+        if (in_array('redis', $modules, true)) {
+            $port = $this->generatePortFromName($projectName . '-redis');
+            $lines[] = "REDIS_PORT=$port";
+        }
+        if (in_array('mailpit', $modules, true)) {
+            $port = $this->generatePortFromName($projectName . '-mailpit');
+            $smtpPort = $this->generatePortFromName($projectName . '-mailpit-smtp');
+            $lines[] = "# MailPit web (http://localhost:$port)";
+            $lines[] = "MAILPIT_PORT=$port";
+            $lines[] = "MAILPIT_SMTP_PORT=$smtpPort";
+        }
+        if (in_array('ollama', $modules, true)) {
+            $port = $this->generatePortFromName($projectName . '-ollama');
+            $lines[] = "OLLAMA_PORT=$port";
+        }
+
+        if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true)) {
+            $lines[] = '';
+            $lines[] = '# =================================';
+            $lines[] = '# DATABASE CONFIGURATION';
+            $lines[] = '# =================================';
+            $lines[] = 'DB_NAME=db';
+            $lines[] = 'DB_USER=user';
+            $lines[] = 'DB_PASSWORD=password';
+        }
+
+        if (in_array('mysql', $modules, true)) {
+            $lines[] = '';
+            $lines[] = '# =================================';
+            $lines[] = '# DATABASE CONFIGURATION';
+            $lines[] = '# =================================';
+            $lines[] = 'DB_NAME=db';
+            $lines[] = 'DB_USER=user';
+            $lines[] = 'DB_PASSWORD=password';
+            $lines[] = 'DB_ROOT_PASSWORD=root';
+        }
+
+        $envContent = implode("\n", $lines) . "\n";
+        file_put_contents($mtdockerPath . DIRECTORY_SEPARATOR . '.env', $envContent);
+    }
+
+    public function saveModuleConfig(array $modules, string $mtdockerPath): void
+    {
+        $configPath = $mtdockerPath . DIRECTORY_SEPARATOR . 'modules.json';
+        file_put_contents($configPath, json_encode($modules, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+    }
+
+    public function loadModuleConfig(): array
+    {
+        $projectDir = $this->composer->getProjectDir();
+        $configPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker' . DIRECTORY_SEPARATOR . 'modules.json';
+
+        if (!file_exists($configPath)) {
+            return [];
+        }
+
+        $content = file_get_contents($configPath);
+        $modules = json_decode($content, true);
+
+        return is_array($modules) ? $modules : [];
     }
 
     public function dockerComposeCommand(): string
     {
         $projectDir = $this->composer->getProjectDir();
         $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
+        $modulesPath = $this->getModulesPath();
+        $modules = $this->loadModuleConfig();
 
-        // Enable BuildKit for faster builds
         $envVars = 'DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 ';
 
-        return $envVars . 'docker compose -f ' . $mtdockerPath . DIRECTORY_SEPARATOR . 'compose.yml --project-directory ' . $mtdockerPath . ' --project-name ' . $this->getProjectName();
+        $composeFiles = '';
+        $baseFirst = ['frankenphp', 'apache-php', 'apache-html'];
+        $orderedModules = [];
+
+        foreach ($baseFirst as $base) {
+            if (in_array($base, $modules, true)) {
+                $orderedModules[] = $base;
+            }
+        }
+        foreach ($modules as $module) {
+            if (!in_array($module, $baseFirst, true)) {
+                $orderedModules[] = $module;
+            }
+        }
+
+        foreach ($orderedModules as $module) {
+            $composeFile = $modulesPath . DIRECTORY_SEPARATOR . 'compose.' . $module . '.yml';
+            $composeFiles .= ' -f ' . $composeFile;
+        }
+
+        return $envVars . 'docker compose --env-file ' . $mtdockerPath . DIRECTORY_SEPARATOR . '.env' . $composeFiles . ' --project-name ' . $this->getProjectName();
     }
 
     public function getApachePort(): int
@@ -254,7 +381,7 @@ class Docker
             }
         }
 
-        return 8080; // fallback
+        return 8080;
     }
 
     public function displayApacheLink(): void
@@ -283,7 +410,6 @@ class Docker
                 echo "\n❌ Error starting containers (exit code: $exitCode)\n";
             }
         } else {
-            // For non-detached mode, use passthru to display output
             passthru($command);
         }
     }
@@ -300,103 +426,16 @@ class Docker
         return str_contains(exec('docker compose ls | grep ' . $this->getProjectName()), $this->getProjectName());
     }
 
-    private function generateAvailablePorts(string $envContent): string
-    {
-        $projectName = basename($this->composer->getProjectDir());
-
-        // Base ports that are always present
-        $ports = [
-                'APACHE_PORT' => $this->generatePortFromName($projectName)
-        ];
-
-        // Add other ports only if they exist in the .env.example
-        if (str_contains($envContent, 'MYSQL_PORT=')) {
-            $ports['MYSQL_PORT'] = $this->generatePortFromName($projectName . '-mysql');
-        }
-        if (str_contains($envContent, 'POSTGRES_PORT=')) {
-            $ports['POSTGRES_PORT'] = $this->generatePortFromName($projectName . '-postgres');
-        }
-        if (str_contains($envContent, 'PHPMYADMIN_PORT=')) {
-            $ports['PHPMYADMIN_PORT'] = $this->generatePortFromName($projectName . '-phpmyadmin');
-        }
-        if (str_contains($envContent, 'ADMINER_PORT=')) {
-            $ports['ADMINER_PORT'] = $this->generatePortFromName($projectName . '-adminer');
-        }
-        if (str_contains($envContent, 'REDIS_PORT=')) {
-            $ports['REDIS_PORT'] = $this->generatePortFromName($projectName . '-redis');
-        }
-        if (str_contains($envContent, 'MAILPIT_PORT=')) {
-            $ports['MAILPIT_PORT'] = $this->generatePortFromName($projectName . '-mailpit');
-        }
-        if (str_contains($envContent, 'MAILPIT_SMTP_PORT=')) {
-            $ports['MAILPIT_SMTP_PORT'] = $this->generatePortFromName($projectName . '-mailpit-smtp');
-        }
-        if (str_contains($envContent, 'OLLAMA_PORT=')) {
-            $ports['OLLAMA_PORT'] = $this->generatePortFromName($projectName . '-ollama');
-        }
-
-        foreach ($ports as $varName => $port) {
-            // Replace port values
-            $envContent = preg_replace("/^$varName=\d+$/m", "$varName=$port", $envContent) ?? $envContent;
-            $envContent = (string)$envContent;
-
-            // Update comments with actual generated ports
-            if ($varName === 'APACHE_PORT') {
-                $envContent = str_replace(
-                    '# Port to access Apache web server (ex: http://localhost:8080)',
-                    "# Port to access Apache web server (http://localhost:$port)",
-                    $envContent
-                );
-            } elseif ($varName === 'MYSQL_PORT') {
-                $envContent = str_replace(
-                    '# Port to access MySQL directly (ex: localhost:3307)',
-                    "# Port to access MySQL directly (localhost:$port)",
-                    $envContent
-                );
-            } elseif ($varName === 'POSTGRES_PORT') {
-                $envContent = str_replace(
-                    '# Port to access PostgreSQL directly (ex: localhost:5433)',
-                    "# Port to access PostgreSQL directly (localhost:$port)",
-                    $envContent
-                );
-            } elseif ($varName === 'PHPMYADMIN_PORT') {
-                $envContent = str_replace(
-                    '# Port to access PhpMyAdmin (ex: http://localhost:8081)',
-                    "# Port to access PhpMyAdmin (http://localhost:$port)",
-                    $envContent
-                );
-            } elseif ($varName === 'ADMINER_PORT') {
-                $envContent = str_replace(
-                    '# Port to access Adminer (ex: http://localhost:8081)',
-                    "# Port to access Adminer (http://localhost:$port)",
-                    $envContent
-                );
-            } elseif ($varName === 'MAILPIT_PORT') {
-                $envContent = str_replace(
-                    '# Port for MailPit web interface (ex: http://localhost:8025)',
-                    "# Port for MailPit web interface (http://localhost:$port)",
-                    $envContent
-                );
-            }
-        }
-
-        return $envContent;
-    }
-
     private function generatePortFromName(string $name): int
     {
-        // Generate a deterministic port based on the name hash
         $hash = md5($name);
-        // Convert first 4 hex chars to decimal and map to port range 1024-49151
         $port = 1024 + (hexdec(substr($hash, 0, 4)) % 48128);
 
-        // Ensure the port is available, if not increment until we find one
         return $this->findAvailablePortFromBase($port);
     }
 
     private function findAvailablePortFromBase(int $basePort): int
     {
-        // Start from the base port and find the first available one
         for ($port = $basePort; $port < $basePort + 100; $port++) {
             $connection = @fsockopen('127.0.0.1', $port, $errno, $errstr, 1);
             if (!$connection) {
@@ -405,7 +444,6 @@ class Docker
             fclose($connection);
         }
 
-        // If no port is available in the range, fall back to the base port
         return $basePort;
     }
 }

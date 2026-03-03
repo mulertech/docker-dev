@@ -1,0 +1,8 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: ${CONTAINER_NAME_REDIS}
+    ports:
+      - "${REDIS_PORT}:6379"
+    networks:
+      - mtdocker-network

@@ -7,11 +7,11 @@ ___
 ___
 
 
-The **MulerTech Docker-dev** package provides complete Docker-based development environments for web projects with multiple templates (Apache, MySQL/PostgreSQL, Symfony) and includes integrated testing capabilities.
+The **MulerTech Docker-dev** package provides complete Docker-based development environments for web projects with a modular, composable architecture (Apache, MySQL/PostgreSQL, Symfony, Redis, MailPit, Ollama...) and includes integrated testing capabilities.
 
 ## Description
 
-This package simplifies web development by providing pre-configured Docker environments for different project types. It offers ready-to-use templates for various development stacks and includes integrated testing tools (PHPUnit, PHPStan, PHP-CS-Fixer) that work seamlessly within the containerized environment.
+This package simplifies web development by providing pre-configured Docker environments for different project types. It uses a **modular system** where each service (database, cache, mail...) is an independent module that can be freely combined. It includes integrated testing tools (PHPUnit, PHPStan, PHP-CS-Fixer) that work seamlessly within the containerized environment.
 
 ## Prerequisites
 
@@ -35,7 +35,7 @@ This package simplifies web development by providing pre-configured Docker envir
 
 ### For Static HTML/CSS/JS Projects (Apache-HTML)
 
-Since this template doesn't use PHP or Composer, you have two options:
+Since static projects don't use PHP or Composer, the modular system (`mtdocker`) is not available. A standalone template is provided with two setup options:
 
 #### Option 1: Quick Setup with Install Script (Recommended)
 
@@ -45,54 +45,51 @@ curl -sSL https://raw.githubusercontent.com/mulertech/docker-dev/main/install-ap
 ```
 
 This script will:
-- Download all necessary Docker files
+- Download all necessary Docker files (`Dockerfile`, `compose.yml`, `.env`)
 - Auto-configure environment variables (USER_ID, GROUP_ID, unique ports)
 - Create a sample `index.html` file (if none exists)
 - Provide ready-to-use Docker environment
 
 #### Option 2: Manual Setup
 
-1. Download the apache-html template files from [GitHub](https://github.com/mulertech/docker-dev/tree/main/templates/apache-html)
-2. Copy the files to your project root:
+1. Download the standalone template files from [`templates/apache-html/`](https://github.com/mulertech/docker-dev/tree/main/templates/apache-html)
+2. Copy the 3 files to your project root:
    - `Dockerfile`
-   - `compose.yml` 
-   - `.env.example` (rename to `.env`)
+   - `compose.yml`
+   - `.env.example` (rename to `.env` and adjust USER_ID, GROUP_ID, APACHE_PORT)
 3. Run the Docker environment:
    ```sh
-   docker-compose up -d
+   docker compose up -d
    ```
 
 ## Usage
 
-### Development Environment Templates
+### Development Environment (Modular System)
 
-The primary feature of this package is to quickly set up complete development environments. Initialize your project with:
-
-```sh
-# Auto-detect and initialize the best template for your project
-./vendor/bin/mtdocker init
-
-# Or choose a specific template
-./vendor/bin/mtdocker init symfony
-./vendor/bin/mtdocker init symfony-pgvector-ollama
-./vendor/bin/mtdocker init apache-mysql  
-./vendor/bin/mtdocker init apache-simple
-./vendor/bin/mtdocker init apache-html
-```
-
-This creates a complete development environment with web server, database (if needed), and all necessary services ready to use.
-
-**🚀 Zero-Configuration Mode:**
-You can also just run any command directly and the environment will be auto-initialized:
+**🚀 Zero-Configuration Mode:** No setup required. Just run any command and the environment is automatically created based on your `composer.json`:
 
 ```sh
-# These commands automatically set up your environment if needed
 ./vendor/bin/mtdocker up -d
 ./vendor/bin/mtdocker test
-./vendor/bin/mtdocker down
+./vendor/bin/mtdocker phpstan
 ```
 
-No manual setup required - the system detects your project type and creates the appropriate environment automatically.
+The system detects your project type (Symfony, database, AI/RAG packages...) and activates the appropriate modules automatically.
+
+**Manual initialization:** If you want to control which modules are activated, use `init` with a comma-separated list:
+
+```sh
+# Auto-detect modules
+./vendor/bin/mtdocker init
+
+# Or choose specific modules
+./vendor/bin/mtdocker init frankenphp,symfony,postgres,redis,mailpit,adminer
+./vendor/bin/mtdocker init frankenphp,postgres,adminer
+./vendor/bin/mtdocker init frankenphp
+
+# View active modules
+./vendor/bin/mtdocker modules
+```
 
 ### Managing Your Development Environment
 
@@ -290,35 +287,82 @@ To get the clickable link to access your application, use the following command:
 
 This command will display a clickable link to your application (e.g., http://localhost:8080).
 
-### Available Templates
+### Available Modules
 
-**Smart template auto-detection:**
-1. **Symfony projects with AI/RAG** → `symfony-pgvector-ollama` template (detects AI packages: `pgvector`, `openai`, `anthropic`, `langchain`, `chromadb`, `yethee/tiktoken`)
-2. **Symfony projects** → `symfony` template (detects `symfony/framework-bundle`, `symfony/symfony`, or `symfony/kernel`)
-3. **Database projects** → `apache-mysql` template (detects `ext-pdo` requirement) 
-4. **Simple projects** → `apache-simple` template (fallback)
+Each module is an independent Docker Compose file that can be freely combined with others.
 
-**Available templates:**
-- `apache-simple`: Basic Apache + PHP environment for simple web projects
-- `apache-mysql`: Apache + PHP + MySQL environment for database-driven applications
-- `apache-html`: Pure Apache HTTP server for static HTML/CSS/JS projects (no PHP) - [Download template files](https://github.com/mulertech/docker-dev/tree/main/templates/apache-html)
-- `symfony`: Complete Symfony development environment with Apache, PostgreSQL 15, Adminer, Redis, and MailPit (automatically configures Doctrine for Docker environment)
-- `symfony-pgvector-ollama`: Advanced Symfony environment for AI/RAG projects with Apache, PostgreSQL 17 + pgvector extension, Ollama (local LLM), Adminer, Redis, and MailPit
+| Module | Services | Description |
+|--------|----------|-------------|
+| `frankenphp` | FrankenPHP (Caddy) | **Default.** Modern PHP app server built on Caddy. Defines the shared network. |
+| `apache-php` | Apache + PHP | Alternative base web server with Apache + mod_php. Defines the shared network. |
+| `apache-html` | Apache | Static web server without PHP (httpd:2.4-alpine). Defines the shared network. |
+| `symfony` | *(overlay)* | Adds Symfony configuration: php.ini, Caddyfile/apache.conf, mailer secret. |
+| `postgres` | PostgreSQL 16 | PostgreSQL database with volume persistence and SQL init scripts. |
+| `mysql` | MySQL 8 | MySQL database with volume persistence, UTF-8 charset, and SQL init scripts. |
+| `pgvector` | PostgreSQL 17 + pgvector | PostgreSQL with vector embeddings extension for AI/RAG projects. |
+| `redis` | Redis 7 | Redis cache server (Alpine). |
+| `mailpit` | MailPit | Local mail server with SMTP capture and web interface. |
+| `adminer` | Adminer | Database web administration interface with auto-login and dark theme. |
+| `ollama` | Ollama | Local LLM server for AI/RAG projects. |
 
-**Template initialization process:**
+#### Smart auto-detection
+
+When running `./vendor/bin/mtdocker init` without arguments, modules are automatically selected based on your `composer.json`:
+
+| Detection criteria | Modules activated |
+|--------------------|-------------------|
+| `symfony/framework-bundle`, `symfony/symfony`, or `symfony/kernel` detected **+ AI packages** (`pgvector`, `openai`, `anthropic`, `langchain`, `chromadb`, `yethee/tiktoken`) | `frankenphp`, `symfony`, `pgvector`, `ollama`, `redis`, `mailpit`, `adminer` |
+| `symfony/framework-bundle`, `symfony/symfony`, or `symfony/kernel` detected | `frankenphp`, `symfony`, `postgres`, `redis`, `mailpit`, `adminer` |
+| `ext-pdo` requirement detected | `frankenphp`, `postgres`, `adminer` |
+| PHP version detected (any PHP project) | `frankenphp` |
+| No PHP detected | `apache-html` |
+
+For Symfony projects, the AI/RAG packages in `composer.json` determine whether `pgvector` + `ollama` or standard `postgres` is activated. To use Apache instead of FrankenPHP, pass the modules explicitly (e.g., `mtdocker init apache-php,symfony,postgres,redis,mailpit,adminer`).
+
+#### Module combinations examples
+
+```sh
+# Symfony standard stack (FrankenPHP)
+./vendor/bin/mtdocker init frankenphp,symfony,postgres,redis,mailpit,adminer
+
+# Symfony AI/RAG stack
+./vendor/bin/mtdocker init frankenphp,symfony,pgvector,ollama,redis,mailpit,adminer
+
+# PHP + PostgreSQL + Adminer
+./vendor/bin/mtdocker init frankenphp,postgres,adminer
+
+# Minimal PHP only
+./vendor/bin/mtdocker init frankenphp
+
+# Symfony with Apache (instead of FrankenPHP)
+./vendor/bin/mtdocker init apache-php,symfony,postgres,redis,mailpit,adminer
+
+# PHP + MySQL with Apache
+./vendor/bin/mtdocker init apache-php,mysql,adminer
+
+# Static HTML site
+./vendor/bin/mtdocker init apache-html
+```
+
+#### Initialization process
+
 - Creates a `.mtdocker/` directory in your project root
-- Copies all necessary Docker configuration files
-- Creates a `.env` file with auto-detected system settings (USER_ID, GROUP_ID, PHP version)
+- Copies necessary build files (Dockerfile, configs, secrets, SQL scripts)
+- Creates a `.env` file with auto-detected system settings (USER_ID, GROUP_ID, PHP version, absolute paths)
+- Saves the active module list in `.mtdocker/modules.json`
 - Generates deterministic ports based on project name to avoid conflicts
 - **Automatically adds `.mtdocker/` to `.gitignore`** (best practice)
-- **For Symfony projects**: Interactive template selection with smart defaults based on detected AI/RAG packages
-- **Automatically configures Symfony projects** with Doctrine settings for PostgreSQL into `doctrine.yaml`
-- **Automatically configures Symfony Mailer** to use MailPit into `.env`
+- **For Symfony projects**: Automatically configures Doctrine settings for PostgreSQL into `doctrine.yaml`
+- **For Symfony projects**: Automatically configures Mailer to use MailPit into `mailer.yaml`
 - Provides a complete development environment ready to use
+
+#### Migration from legacy templates
+
+If your project was initialized with a previous version (using monolithic templates with `compose.yml`), running any `mtdocker` command will detect the legacy configuration and propose a re-initialization with the new module system.
 
 ### Database Initialization
 
-For templates with databases (`apache-mysql` with MySQL, and `symfony` with PostgreSQL), you can easily initialize your database with custom SQL files:
+For configurations with database modules (`mysql`, `postgres`, or `pgvector`), you can easily initialize your database with custom SQL files:
 
 ```sh
 # 1. Copy your SQL files to the sql directory
@@ -347,8 +391,8 @@ Configure PHPStorm to work with your Docker development environment:
 3. Add new interpreter: `From Docker, Vagrant, VM, WSL, Remote...`
 4. Configure Docker Compose interpreter:
    - Server: `Docker` (create new if needed)
-   - Configuration files: `./.mtdocker/compose.yml`
-   - Service: `apache` or `php`
+   - Configuration files: select the compose module files from `vendor/mulertech/docker-dev/templates/modules/` matching your active modules (see `./vendor/bin/mtdocker modules`)
+   - Service: `apache`
    - Environment variables: `COMPOSE_PROJECT_NAME=<project name>` (get with `./vendor/bin/mtdocker name`)
 
 **PHPUnit Integration:**
@@ -361,10 +405,11 @@ Configure PHPStorm to work with your Docker development environment:
 ## Architecture
 
 ### Core Classes
-- **`Composer`**: Project analysis (PHP version detection, database requirements, Symfony detection)
-- **`Docker`**: Template management, port generation, Docker operations
+- **`Application`**: Main CLI dispatcher handling all commands
+- **`Composer`**: Project analysis (PHP version detection, database requirements, Symfony detection, AI/RAG package detection)
+- **`Docker`**: Module initialization, Docker Compose lifecycle, port generation, container naming
+- **`ModuleResolver`**: Module auto-detection logic based on `composer.json` analysis, file resolution for each module combination
 - **`Symfony`**: Symfony-specific configurations (Doctrine, Mailer)
-- **`Application`**: Main orchestrator handling CLI commands
 
 ### Command System
 - **`CommandInterface`**: Contract for all commands
@@ -372,8 +417,15 @@ Configure PHPStorm to work with your Docker development environment:
 - **Specific Commands**: `PhpunitCommand`, `PhpStanCommand`, `CsFixerCommand`, `ComposerCommand`, `SymfonyCommand`
 - **`CommandRegistry`**: Command routing and management
 
+### Module System
+- **`templates/modules/`**: 10 independent Docker Compose files, one per module. They stay in the package and are referenced via absolute paths.
+- **`templates/shared/`**: Build context files (Dockerfiles, configs, SQL scripts, secrets) copied into `.mtdocker/` during initialization.
+- **Docker Compose merge**: Modules are combined via `docker compose -f ... -f ...`. The base module (`apache-php` or `apache-html`) is always loaded first, then overlays are applied in order.
+
 ### Key Features
+- **Composable Modules**: Mix and match services freely instead of choosing from fixed templates
 - **Custom Arguments**: All commands support additional arguments (e.g., `./vendor/bin/mtdocker phpstan --generate-baseline`)
 - **Auto-initialization**: Environment setup happens automatically when needed
-- **Smart Detection**: Project type detection for optimal template selection
+- **Smart Detection**: Project type detection for optimal module selection
 - **Permission Handling**: Proper UID/GID management for file permissions
+- **Legacy Migration**: Automatic detection and migration from old template-based configurations

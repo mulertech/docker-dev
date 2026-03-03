@@ -59,6 +59,9 @@ class Application
             case 'init':
                 $this->handleInit($arg2);
                 break;
+            case 'modules':
+                $this->handleModules();
+                break;
             case 'symfony':
                 $this->handleSymfony($args);
                 break;
@@ -138,14 +141,34 @@ class Application
         echo "Project name : $projectName" . PHP_EOL . "Configuration CLI interpreter environment variable : COMPOSE_PROJECT_NAME=$projectName" . PHP_EOL;
     }
 
-    private function handleInit(string $template): void
+    private function handleInit(string $modulesArg): void
     {
-        $this->initTemplate($template);
+        if (empty($modulesArg)) {
+            $this->docker->autoInitModules(true);
+            return;
+        }
+
+        $modules = array_map('trim', explode(',', $modulesArg));
+        $this->docker->performModuleInitialization($modules, true);
+    }
+
+    private function handleModules(): void
+    {
+        $modules = $this->docker->loadModuleConfig();
+
+        if ($modules === []) {
+            echo "No modules configured. Run 'mtdocker init' to initialize.\n";
+            return;
+        }
+
+        echo "Active modules:\n";
+        foreach ($modules as $module) {
+            echo "  - $module\n";
+        }
     }
 
     private function handleSymfony(array $args): void
     {
-        // Get command arguments starting from index 2 (after 'symfony')
         $consoleArgs = array_slice($args, 2);
         $this->commandRegistry->executeCommand('symfony', $consoleArgs);
     }
@@ -160,17 +183,5 @@ class Application
     {
         $this->docker->ensureEnvironment();
         $this->docker->displayApacheLink();
-    }
-
-    private function initTemplate(string $template): void
-    {
-        // Auto-detect template if not specified
-        if (empty($template)) {
-            $template = $this->docker->detectTemplate();
-            echo "Auto-detected template: $template\n";
-        }
-
-        // Use the common initialization function with confirmation
-        $this->docker->performTemplateInitialization($template, true);
     }
 }

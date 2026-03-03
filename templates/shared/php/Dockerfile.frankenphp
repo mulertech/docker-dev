@@ -1,0 +1,40 @@
+ARG FRANKENPHP_IMAGE=dunglas/frankenphp:latest
+FROM ${FRANKENPHP_IMAGE}
+
+ARG USER_ID
+ARG GROUP_ID
+
+# Use PHP extension installer optimized for Docker
+ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
+
+# Install basic PHP extensions
+RUN install-php-extensions \
+    pdo \
+    pdo_pgsql \
+    pdo_mysql \
+    mysqli \
+    zip \
+    gd \
+    mbstring \
+    opcache
+
+# Copy Composer from official image
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Remove and recreate www-data user with correct IDs
+RUN userdel -r www-data 2>/dev/null || true \
+    && if ! getent group ${GROUP_ID} >/dev/null 2>&1; then \
+        groupadd -g ${GROUP_ID} www-data; \
+    else \
+        EXISTING_GROUP=$(getent group ${GROUP_ID} | cut -d: -f1); \
+        groupmod -n www-data "$EXISTING_GROUP" 2>/dev/null || \
+        groupadd -g 1000 www-data; \
+    fi \
+    && useradd -u ${USER_ID} -g www-data -m -s /bin/bash www-data
+
+# Configure permissions
+RUN chown -R www-data:www-data /app \
+    && chmod -R 755 /app
+
+WORKDIR /app
+EXPOSE 80

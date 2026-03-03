@@ -1,0 +1,13 @@
+services:
+  apache:
+    volumes:
+      - ${MTDOCKER_PATH}/php/php.ini:/usr/local/etc/php/php.ini
+      - ${MTDOCKER_PATH}/php/apache.conf:/etc/apache2/sites-available/000-default.conf
+    environment:
+      - MAILER_DSN_FILE=/run/secrets/mailer_dsn
+    secrets:
+      - mailer_dsn
+
+secrets:
+  mailer_dsn:
+    file: ${MTDOCKER_PATH}/secrets/mailer_dsn
