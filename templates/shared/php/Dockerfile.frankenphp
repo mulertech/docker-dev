@@ -16,7 +16,8 @@ RUN install-php-extensions \
     zip \
     gd \
     mbstring \
-    opcache
+    opcache \
+    pcov
 
 # Copy Composer from official image
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

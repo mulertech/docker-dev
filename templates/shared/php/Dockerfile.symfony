@@ -30,7 +30,7 @@ RUN install-php-extensions \
     sockets \
     # Cache and debugging
     redis \
-    xdebug \
+    pcov \
     apcu \
     # Advanced extensions (ignore if fail)
     @composer \
