@@ -2,13 +2,10 @@ ARG PHP_IMAGE=php:fpm-alpine
 FROM ${PHP_IMAGE}
 
 ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
-RUN install-php-extensions bcmath gd pdo_mysql pdo_pgsql redis xdebug yaml
+RUN install-php-extensions bcmath gd pdo_mysql pdo_pgsql redis pcov yaml
 
 # install mysql client and connector for MySQL 8 authentication
 RUN apk add --no-cache mysql-client mariadb-connector-c
-
-# xdebug settings
-RUN echo "xdebug.mode=coverage" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
 # add user and group ids to match host user and group ids to avoid permission issues
 ARG USER_ID
