@@ -70,4 +70,15 @@ class Composer
         $composer = file_get_contents($this->getProjectDir() . '/composer.json');
         return str_contains($composer, 'sensiolabs/gotenberg-bundle');
     }
+
+    public function hasPackage(string $package): bool
+    {
+        $composer = file_get_contents($this->getProjectDir() . '/composer.json');
+        return str_contains($composer, $package);
+    }
+
+    public function hasFile(string $relativePath): bool
+    {
+        return file_exists($this->getProjectDir() . DIRECTORY_SEPARATOR . $relativePath);
+    }
 }

@@ -41,15 +41,15 @@ All commands are run via the `mtdocker` binary. Within this repository itself (f
 ### Core Classes (`src/`)
 
 - **`Application`** — CLI dispatcher. Routes commands (`test`, `up`, `down`, `init`, `modules`, `symfony`, `composer`, `phpstan`, `cs-fixer`, `all`, `ps`, `name`, `link`) to Docker or CommandRegistry.
-- **`Composer`** — Reads the consumer project's `composer.json` to detect PHP version, project type (Symfony, database-needed, AI/RAG packages), and project root directory.
-- **`Docker`** — Manages Docker Compose lifecycle (`up`, `down`, `ps`), module initialization, port generation, container naming, and `.gitignore` management. Uses multi-file compose via `docker compose -f ... -f ...` with modules from `templates/modules/`.
+- **`Composer`** — Reads the consumer project's `composer.json` to detect PHP version, project type (Symfony, database-needed, AI/RAG packages), project root directory, and package presence (`hasPackage()`).
+- **`Docker`** — Manages Docker Compose lifecycle (`up`, `down`, `ps`), module initialization, port generation, container naming, `.gitignore` management, and first-time setup. Uses multi-file compose via `docker compose -f ... -f ...` with modules from `templates/modules/`.
 - **`ModuleResolver`** — Encapsulates module detection logic. Uses `Composer` analysis to determine which modules are needed, resolves Dockerfiles and shared files to copy.
 - **`Symfony`** — Applies Symfony-specific config: patches `config/packages/doctrine.yaml` and `config/packages/mailer.yaml` to use Docker environment variables and file-based secrets.
 
 ### Command System (`src/Command/`)
 
 - **`CommandInterface`** — Contract: `getName()`, `getDefaultArgs()`, `execute()`, `requiresDocker()`.
-- **`BaseCommand`** — Abstract. Handles Docker lifecycle around command execution: starts container if not running, runs command, stops container if it wasn't running before.
+- **`BaseCommand`** — Abstract. Handles Docker lifecycle around command execution: starts container if not running, triggers first-time setup, runs command, stops container if it wasn't running before.
 - **`CommandRegistry`** — Registers and dispatches to: `PhpunitCommand` (key: `test`), `PhpStanCommand` (key: `phpstan`), `CsFixerCommand` (key: `cs-fixer`), `ComposerCommand` (key: `composer`), `SymfonyCommand` (key: `symfony`).
 
 ### Module System (`templates/`)
@@ -86,9 +86,24 @@ The system uses composable modules instead of monolithic templates. Each module 
 - `.env` — Generated variables (ports, paths, container names)
 - `modules.json` — Active module list
 - `php/Dockerfile` — Copied from shared/ based on modules
+- `.setup-done` — Marker file indicating first-time setup has been completed
 - Additional files (configs, secrets, SQL, adminer) as needed
 
 **Key design:** Compose files stay in the package (referenced via `${MTDOCKER_PATH}` and `${PROJECT_PATH}` absolute paths in `.env`). Only build context files are copied to `.mtdocker/`.
+
+### First-Time Setup (`Docker::runFirstTimeSetup()`)
+
+On the first `mtdocker up -d` or `mtdocker all` in a fresh project or worktree, the system automatically runs initialization steps inside the container. This is triggered once and tracked by the `.mtdocker/.setup-done` marker file.
+
+**Steps performed (based on detected modules and packages):**
+1. `composer install` — if `vendor/` directory does not exist
+2. `npm install` — if `package.json` exists but `node_modules/` does not (Symfony module only)
+3. `php bin/console tailwind:build` — if `symfonycasts/tailwind-bundle` is detected (Symfony module only)
+4. `php bin/console doctrine:migrations:migrate --no-interaction --env=test` — if `doctrine/doctrine-migrations-bundle` is detected and a database module is active (Symfony module only)
+
+**Database readiness:** Before running migrations, `waitForDatabase()` polls the database container (up to 30s) using `pg_isready` (PostgreSQL/pgvector) or `mysqladmin ping` (MySQL).
+
+**Re-running setup:** Delete `.mtdocker/.setup-done` to force the setup to run again on next command.
 
 ## Code Conventions
 

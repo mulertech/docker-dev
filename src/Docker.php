@@ -424,6 +424,7 @@ class Docker
 
             if ($exitCode === 0) {
                 echo "\n✅ All containers started successfully!\n";
+                $this->runFirstTimeSetup();
                 $this->displayWebLink();
             } else {
                 echo "\n❌ Error starting containers (exit code: $exitCode)\n";
@@ -443,6 +444,78 @@ class Docker
     public function isDockerUp(): bool
     {
         return str_contains(exec('docker compose ls | grep ' . $this->getProjectName()), $this->getProjectName());
+    }
+
+    public function runFirstTimeSetup(): void
+    {
+        $projectDir = $this->composer->getProjectDir();
+        $markerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker' . DIRECTORY_SEPARATOR . '.setup-done';
+
+        if (file_exists($markerPath)) {
+            return;
+        }
+
+        $modules = $this->loadModuleConfig();
+        if ($modules === []) {
+            return;
+        }
+
+        $containerName = $this->getContainerName();
+        $isSymfony = in_array('symfony', $modules, true);
+        $hasDb = in_array('postgres', $modules, true)
+            || in_array('pgvector', $modules, true)
+            || in_array('mysql', $modules, true);
+
+        if (!is_dir($projectDir . DIRECTORY_SEPARATOR . 'vendor')) {
+            echo "Installing Composer dependencies...\n";
+            passthru('docker exec ' . escapeshellarg($containerName) . ' composer install --no-interaction');
+        }
+
+        if ($isSymfony) {
+            if ($this->composer->hasFile('package.json') && !is_dir($projectDir . DIRECTORY_SEPARATOR . 'node_modules')) {
+                echo "Installing npm dependencies...\n";
+                passthru('docker exec ' . escapeshellarg($containerName) . ' npm install');
+            }
+
+            if ($this->composer->hasPackage('symfonycasts/tailwind-bundle')) {
+                echo "Building Tailwind CSS...\n";
+                passthru('docker exec ' . escapeshellarg($containerName) . ' php bin/console tailwind:build');
+            }
+
+            if ($hasDb && $this->composer->hasPackage('doctrine/doctrine-migrations-bundle')) {
+                $this->waitForDatabase($containerName, $modules);
+                echo "Running test database migrations...\n";
+                passthru('docker exec ' . escapeshellarg($containerName) . ' php bin/console doctrine:migrations:migrate --no-interaction --env=test');
+            }
+        }
+
+        file_put_contents($markerPath, date('Y-m-d H:i:s') . "\n");
+        echo "First-time setup completed.\n";
+    }
+
+    private function waitForDatabase(string $containerName, array $modules): void
+    {
+        if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true)) {
+            $dbContainer = $this->getProjectBaseName() . '-postgres';
+            for ($i = 0; $i < 30; $i++) {
+                $result = exec('docker exec ' . escapeshellarg($dbContainer) . ' pg_isready -U user 2>/dev/null', $output, $exitCode);
+                if ($exitCode === 0) {
+                    return;
+                }
+                sleep(1);
+            }
+            echo "Warning: Database may not be ready yet.\n";
+        } elseif (in_array('mysql', $modules, true)) {
+            $dbContainer = $this->getProjectBaseName() . '-mysql';
+            for ($i = 0; $i < 30; $i++) {
+                exec('docker exec ' . escapeshellarg($dbContainer) . ' mysqladmin ping -u user -ppassword 2>/dev/null', $output, $exitCode);
+                if ($exitCode === 0) {
+                    return;
+                }
+                sleep(1);
+            }
+            echo "Warning: Database may not be ready yet.\n";
+        }
     }
 
     private function generatePortFromName(string $name): int

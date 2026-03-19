@@ -21,6 +21,8 @@ abstract class BaseCommand implements CommandInterface
             $this->docker->dockerComposeUp('-d');
         }
 
+        $this->docker->runFirstTimeSetup();
+
         $this->runCommand($customArgs);
 
         if (!$dockerUp && $this->requiresDocker()) {
