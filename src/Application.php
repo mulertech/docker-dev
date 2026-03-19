@@ -98,14 +98,13 @@ class Application
     {
         $this->commandRegistry->executeCommand('test', [
             '--coverage-text', '--colors=never', '--no-progress',
-            '--display-incomplete=false', '--display-skipped=false',
         ]);
     }
 
     private function handleTestAi(array $args): void
     {
         $consoleArgs = array_slice($args, 2);
-        $aiArgs = ['--no-progress', '--colors=never', '--display-incomplete=false', '--display-skipped=false'];
+        $aiArgs = ['--no-progress', '--colors=never'];
         $this->commandRegistry->executeCommand('test', array_merge($aiArgs, $consoleArgs));
     }
 
