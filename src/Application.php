@@ -29,8 +29,11 @@ class Application
             case 'test-coverage':
                 $this->handleTestCoverage();
                 break;
-            case 'test-coverage-text':
-                $this->handleTestCoverageText();
+            case 'test-coverage-ai':
+                $this->handleTestCoverageAi();
+                break;
+            case 'test-ai':
+                $this->handleTestAi($args);
                 break;
             case 'test':
                 $this->handleTest($args);
@@ -41,14 +44,26 @@ class Application
             case 'down':
                 $this->handleDown();
                 break;
+            case 'phpstan-ai':
+                $this->handlePhpstanAi($args);
+                break;
             case 'phpstan':
                 $this->handlePhpstan($args);
+                break;
+            case 'cs-fixer-ai':
+                $this->handleCsFixerAi($args);
                 break;
             case 'cs-fixer':
                 $this->handleCsFixer($args);
                 break;
+            case 'all-ai':
+                $this->handleAllAi();
+                break;
             case 'all':
                 $this->handleAll();
+                break;
+            case 'ps-ai':
+                $this->handlePsAi();
                 break;
             case 'ps':
                 $this->handlePs();
@@ -79,9 +94,19 @@ class Application
         $this->commandRegistry->executeCommand('test', ['--coverage-html', './.phpunit.cache/coverage']);
     }
 
-    private function handleTestCoverageText(): void
+    private function handleTestCoverageAi(): void
     {
-        $this->commandRegistry->executeCommand('test', ['--coverage-text', '--colors=never']);
+        $this->commandRegistry->executeCommand('test', [
+            '--coverage-text', '--colors=never', '--no-progress',
+            '--display-incomplete=false', '--display-skipped=false',
+        ]);
+    }
+
+    private function handleTestAi(array $args): void
+    {
+        $consoleArgs = array_slice($args, 2);
+        $aiArgs = ['--no-progress', '--colors=never', '--display-incomplete=false', '--display-skipped=false'];
+        $this->commandRegistry->executeCommand('test', array_merge($aiArgs, $consoleArgs));
     }
 
     private function handleTest(array $args): void
@@ -100,10 +125,24 @@ class Application
         $this->docker->dockerComposeDown();
     }
 
+    private function handlePhpstanAi(array $args): void
+    {
+        $consoleArgs = array_slice($args, 2);
+        $aiArgs = ['analyse', '--memory-limit=1G', '--no-progress', '--error-format=json'];
+        $this->commandRegistry->executeCommand('phpstan', array_merge($aiArgs, $consoleArgs));
+    }
+
     private function handlePhpstan(array $args): void
     {
         $consoleArgs = array_slice($args, 2);
         $this->commandRegistry->executeCommand('phpstan', $consoleArgs);
+    }
+
+    private function handleCsFixerAi(array $args): void
+    {
+        $consoleArgs = array_slice($args, 2);
+        $aiArgs = ['fix', 'src', '--format=json', '--no-ansi', '--show-progress=none'];
+        $this->commandRegistry->executeCommand('cs-fixer', array_merge($aiArgs, $consoleArgs));
     }
 
     private function handleCsFixer(array $args): void
@@ -112,9 +151,34 @@ class Application
         $this->commandRegistry->executeCommand('cs-fixer', $consoleArgs);
     }
 
+    private function handleAllAi(): void
+    {
+        $this->handleCsFixerAi([]);
+        $this->handleTestAi([]);
+        $this->handlePhpstanAi([]);
+    }
+
     private function handleAll(): void
     {
         $this->commandRegistry->executeAll();
+    }
+
+    private function handlePsAi(): void
+    {
+        $this->docker->ensureEnvironment();
+        $dockerUp = $this->docker->isDockerUp();
+
+        if (!$dockerUp) {
+            $this->docker->dockerComposeUp('-d');
+        }
+
+        $cmd = $this->docker->dockerComposeCommand() . ' ps --format json';
+        $output = shell_exec($cmd);
+        echo $output;
+
+        if (!$dockerUp) {
+            $this->docker->dockerComposeDown();
+        }
     }
 
     private function handlePs(): void

@@ -137,13 +137,13 @@ To run the tests with code coverage, use the following command:
 
 The code coverage report will be generated in the `./.phpunit.cache/coverage` folder.
 
-To get a plain text coverage report (useful for CI or AI agents):
+To get a plain text coverage report with code coverage (AI-optimized output):
 
 ```sh
-./vendor/bin/mtdocker test-coverage-text
+./vendor/bin/mtdocker test-coverage-ai
 ```
 
-The coverage report will be displayed directly in the terminal as plain text without colors.
+The coverage report will be displayed directly in the terminal as plain text without colors, progress bar, or skipped/incomplete test noise.
 
 These commands will:
 - Check if the Docker container is running.
@@ -198,6 +198,68 @@ This command will:
 - If the container is not running, it will be started.
 - Run php-cs-fixer in the container with all provided arguments.
 - Stop the container if it was not running before php-cs-fixer was executed.
+
+### AI Agent Commands
+
+A set of commands optimized for use by AI agents: minimal output, no ANSI colors, no progress bars, machine-readable formats where applicable.
+
+#### test-ai
+
+Runs PHPUnit showing only failures, errors, deprecations, notices and warnings — suppresses progress bar, skipped and incomplete tests:
+
+```sh
+./vendor/bin/mtdocker test-ai [arguments...]
+```
+
+Additional PHPUnit arguments are supported:
+
+```sh
+# Run a specific test class
+./vendor/bin/mtdocker test-ai --filter=MyTestClass
+
+# Run a specific test method
+./vendor/bin/mtdocker test-ai --filter=MyTestClass::testMyMethod
+```
+
+#### test-coverage-ai
+
+Runs PHPUnit with a plain text coverage report, same noise suppression as `test-ai`:
+
+```sh
+./vendor/bin/mtdocker test-coverage-ai
+```
+
+#### phpstan-ai
+
+Runs PHPStan with JSON output and no progress bar — directly parsable by an agent:
+
+```sh
+./vendor/bin/mtdocker phpstan-ai [arguments...]
+```
+
+#### cs-fixer-ai
+
+Runs PHP CS Fixer silently (applies fixes, JSON report, no ANSI, no progress bar):
+
+```sh
+./vendor/bin/mtdocker cs-fixer-ai [arguments...]
+```
+
+#### all-ai
+
+Runs `cs-fixer-ai`, `test-ai` and `phpstan-ai` in sequence:
+
+```sh
+./vendor/bin/mtdocker all-ai
+```
+
+#### ps-ai
+
+Returns Docker Compose container status as JSON:
+
+```sh
+./vendor/bin/mtdocker ps-ai
+```
 
 ### Composer Commands
 
@@ -264,6 +326,12 @@ This command will:
 - If the container is not running, it will be started.
 - Run php-cs-fixer, phpunit and phpstan in the container.
 - Stop the container if it was not running before the checks were executed.
+
+For an AI-optimized version of this full pipeline, use:
+
+```sh
+./vendor/bin/mtdocker all-ai
+```
 
 ### Advanced Configuration
 
@@ -429,3 +497,4 @@ Configure PHPStorm to work with your Docker development environment:
 - **Smart Detection**: Project type detection for optimal module selection
 - **Permission Handling**: Proper UID/GID management for file permissions
 - **Legacy Migration**: Automatic detection and migration from old template-based configurations
+- **AI Agent Commands**: Dedicated `*-ai` variants (`test-ai`, `phpstan-ai`, `cs-fixer-ai`, `all-ai`, `ps-ai`, `test-coverage-ai`) with minimal output, no ANSI colors, and machine-readable formats for seamless integration with AI agents
