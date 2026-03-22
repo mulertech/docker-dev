@@ -62,6 +62,35 @@ This script will:
    docker compose up -d
    ```
 
+## PHP Sandbox
+
+A lightweight PHP sandbox mode for quick experimentation, learning, or exams. Uses a minimal `php:cli-alpine` Docker image (~30 MB) that starts in about 1 second.
+
+### Getting Started with VS Code
+
+```sh
+git clone https://github.com/mulertech/docker-dev.git && cd docker-dev && ./mtdocker sandbox && code .
+```
+
+### Getting Started with PHPStorm
+
+```sh
+git clone https://github.com/mulertech/docker-dev.git && cd docker-dev && ./mtdocker sandbox && phpstorm .
+```
+
+This single command clones the repository, initializes the sandbox environment, executes `sandbox.php` in a Docker container, and opens your IDE. A `sandbox.php` file is created at the project root with `dump()` and `dd()` helper functions ready to use.
+
+Edit `sandbox.php`, then run:
+
+```sh
+./run
+```
+
+### Available Helper Functions
+
+- `dump($var)` — Pretty-prints a variable with type and color formatting (ANSI for CLI, HTML for web).
+- `dd($var)` — Dump and die.
+
 ## Usage
 
 ### Development Environment (Modular System)
@@ -372,6 +401,7 @@ Each module is an independent Docker Compose file that can be freely combined wi
 | `mailpit` | MailPit | Local mail server with SMTP capture and web interface. |
 | `adminer` | Adminer | Database web administration interface with auto-login and dark theme. |
 | `ollama` | Ollama | Local LLM server for AI/RAG projects. |
+| `sandbox` | PHP CLI (Alpine) | **Standalone.** Lightweight PHP sandbox for quick experimentation. Cannot be combined with other modules. |
 
 #### Smart auto-detection
 
@@ -482,11 +512,11 @@ Configure PHPStorm to work with your Docker development environment:
 ### Command System
 - **`CommandInterface`**: Contract for all commands
 - **`BaseCommand`**: Abstract base with Docker lifecycle management
-- **Specific Commands**: `PhpunitCommand`, `PhpStanCommand`, `CsFixerCommand`, `ComposerCommand`, `SymfonyCommand`
+- **Specific Commands**: `PhpunitCommand`, `PhpStanCommand`, `CsFixerCommand`, `ComposerCommand`, `SymfonyCommand`, `SandboxCommand`
 - **`CommandRegistry`**: Command routing and management
 
 ### Module System
-- **`templates/modules/`**: 10 independent Docker Compose files, one per module. They stay in the package and are referenced via absolute paths.
+- **`templates/modules/`**: 11 independent Docker Compose files, one per module. They stay in the package and are referenced via absolute paths.
 - **`templates/shared/`**: Build context files (Dockerfiles, configs, SQL scripts, secrets) copied into `.mtdocker/` during initialization.
 - **Docker Compose merge**: Modules are combined via `docker compose -f ... -f ...`. The base module (`apache-php` or `apache-html`) is always loaded first, then overlays are applied in order.
 
