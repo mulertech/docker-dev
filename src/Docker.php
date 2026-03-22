@@ -38,23 +38,37 @@ class Docker
         return basename($this->composer->getProjectDir());
     }
 
-    public function addToGitignore(): void
+    public function addToGitignore(array $modules = []): void
     {
         $projectDir = $this->composer->getProjectDir();
         $gitignorePath = $projectDir . '/.gitignore';
 
+        $entries = ['.mtdocker/'];
+        if (in_array('sandbox', $modules, true)) {
+            $entries[] = 'sandbox.php';
+            $entries[] = 'run';
+        }
+
         if (file_exists($gitignorePath)) {
             $gitignoreContent = file_get_contents($gitignorePath);
+            $toAdd = [];
 
-            if (!str_contains($gitignoreContent, '.mtdocker')) {
-                $addition = "\n# Docker development environment\n.mtdocker/\n";
+            foreach ($entries as $entry) {
+                $check = rtrim($entry, '/');
+                if (!str_contains($gitignoreContent, $check)) {
+                    $toAdd[] = $entry;
+                }
+            }
+
+            if ($toAdd !== []) {
+                $addition = "\n# Docker development environment\n" . implode("\n", $toAdd) . "\n";
                 file_put_contents($gitignorePath, $addition, FILE_APPEND);
-                echo "Added .mtdocker/ to .gitignore\n";
+                echo "Added " . implode(', ', $toAdd) . " to .gitignore\n";
             }
         } else {
-            $content = "# Docker development environment\n.mtdocker/\n";
+            $content = "# Docker development environment\n" . implode("\n", $entries) . "\n";
             file_put_contents($gitignorePath, $content);
-            echo "Created .gitignore with .mtdocker/ entry\n";
+            echo "Created .gitignore with entries\n";
         }
     }
 
@@ -130,7 +144,7 @@ class Docker
 
         $this->saveModuleConfig($modules, $mtdockerPath);
 
-        $this->addToGitignore();
+        $this->addToGitignore($modules);
 
         if (in_array('symfony', $modules, true)) {
             $symfony = new Symfony($this->composer);
@@ -191,6 +205,11 @@ class Docker
 
     public function generateEnvFile(array $modules, string $mtdockerPath): void
     {
+        if (in_array('sandbox', $modules, true)) {
+            $this->generateSandboxEnvFile($mtdockerPath);
+            return;
+        }
+
         $uid = getmyuid();
         $gid = getmygid();
         $phpVersion = $this->composer->getPhpVersion();
@@ -366,7 +385,7 @@ class Docker
         $envVars = 'DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 ';
 
         $composeFiles = '';
-        $baseFirst = ['frankenphp', 'apache-php', 'apache-html'];
+        $baseFirst = ['frankenphp', 'apache-php', 'apache-html', 'sandbox'];
         $orderedModules = [];
 
         foreach ($baseFirst as $base) {
@@ -537,5 +556,82 @@ class Docker
         }
 
         return $basePort;
+    }
+
+    public function getSandboxContainerName(): string
+    {
+        return $this->getProjectBaseName() . '-sandbox';
+    }
+
+    private function generateSandboxEnvFile(string $mtdockerPath): void
+    {
+        $phpVersion = $this->composer->getPhpVersion();
+
+        $lines = [];
+        $lines[] = '# =================================';
+        $lines[] = '# PHP VERSION';
+        $lines[] = '# =================================';
+        $lines[] = 'PHP_VERSION_TAG=' . ($phpVersion === '' ? '8.4' : $phpVersion);
+        $lines[] = '';
+        $lines[] = '# =================================';
+        $lines[] = '# PATHS';
+        $lines[] = '# =================================';
+        $lines[] = 'PROJECT_PATH=' . $this->composer->getProjectDir();
+        $lines[] = '';
+        $lines[] = '# =================================';
+        $lines[] = '# CONTAINER CONFIGURATION';
+        $lines[] = '# =================================';
+        $lines[] = 'CONTAINER_NAME_SANDBOX=' . $this->getSandboxContainerName();
+
+        $envContent = implode("\n", $lines) . "\n";
+        file_put_contents($mtdockerPath . DIRECTORY_SEPARATOR . '.env', $envContent);
+    }
+
+    public function initSandboxFiles(): void
+    {
+        $projectDir = $this->composer->getProjectDir();
+        $sharedPath = $this->getSharedPath() . DIRECTORY_SEPARATOR . 'sandbox';
+
+        $sandboxPath = $projectDir . DIRECTORY_SEPARATOR . 'sandbox.php';
+        if (!file_exists($sandboxPath)) {
+            copy($sharedPath . DIRECTORY_SEPARATOR . 'sandbox.php', $sandboxPath);
+        }
+
+        $runPath = $projectDir . DIRECTORY_SEPARATOR . 'run';
+        if (!file_exists($runPath)) {
+            file_put_contents($runPath, "#!/bin/bash\n./mtdocker sandbox\n");
+            chmod($runPath, 0755);
+        }
+    }
+
+    public function ensureSandboxEnvironment(): void
+    {
+        $modules = $this->loadModuleConfig();
+
+        if (in_array('sandbox', $modules, true)) {
+            return;
+        }
+
+        $this->performModuleInitialization(['sandbox'], false, false);
+        $this->initSandboxFiles();
+    }
+
+    public function isSandboxUp(): bool
+    {
+        $containerName = $this->getSandboxContainerName();
+        exec('docker ps --filter name=' . escapeshellarg($containerName) . ' --filter status=running --format "{{.Names}}"', $output);
+        return in_array($containerName, $output, true);
+    }
+
+    public function sandboxUp(): void
+    {
+        $command = $this->dockerComposeCommand() . ' up -d';
+        exec($command . ' 2>&1');
+    }
+
+    public function sandboxDown(): void
+    {
+        $command = $this->dockerComposeCommand() . ' down';
+        exec($command . ' 2>&1');
     }
 }

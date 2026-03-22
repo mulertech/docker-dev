@@ -1,0 +1,14 @@
+services:
+  sandbox:
+    image: php:${PHP_VERSION_TAG:-8.4}-cli-alpine
+    container_name: ${CONTAINER_NAME_SANDBOX}
+    working_dir: /sandbox
+    volumes:
+      - ${PROJECT_PATH}:/sandbox
+    stdin_open: true
+    tty: true
+    command: ["sleep", "infinity"]
+
+networks:
+  mtdocker-network:
+    driver: bridge

@@ -3,6 +3,7 @@
 namespace MulerTech\DockerDev;
 
 use MulerTech\DockerDev\Command\CommandRegistry;
+use MulerTech\DockerDev\Command\SandboxCommand;
 
 /**
  * Class Application
@@ -85,6 +86,9 @@ class Application
                 break;
             case 'link':
                 $this->handleLink();
+                break;
+            case 'sandbox':
+                $this->handleSandbox();
                 break;
         }
     }
@@ -246,5 +250,11 @@ class Application
     {
         $this->docker->ensureEnvironment();
         $this->docker->displayWebLink();
+    }
+
+    private function handleSandbox(): void
+    {
+        $sandboxCommand = new SandboxCommand($this->docker);
+        $sandboxCommand->execute();
     }
 }

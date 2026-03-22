@@ -52,6 +52,10 @@ class ModuleResolver
 
     public function resolveDockerfile(array $modules): string
     {
+        if (in_array('sandbox', $modules, true)) {
+            return '';
+        }
+
         if (in_array('apache-html', $modules, true)) {
             return 'html' . DIRECTORY_SEPARATOR . 'Dockerfile';
         }
@@ -75,6 +79,10 @@ class ModuleResolver
 
     public function resolveFilesToCopy(array $modules): array
     {
+        if (in_array('sandbox', $modules, true)) {
+            return [];
+        }
+
         $files = [];
 
         $dockerfile = $this->resolveDockerfile($modules);
@@ -129,6 +137,10 @@ class ModuleResolver
 
     public function resolveDirectoriesToCreate(array $modules): array
     {
+        if (in_array('sandbox', $modules, true)) {
+            return [];
+        }
+
         $dirs = [];
 
         if (in_array('apache-html', $modules, true)) {
@@ -172,6 +184,7 @@ class ModuleResolver
             'adminer',
             'ollama',
             'gotenberg',
+            'sandbox',
         ];
     }
 
@@ -180,6 +193,15 @@ class ModuleResolver
         $available = self::availableModules();
         $invalid = array_diff($modules, $available);
 
-        return $invalid;
+        if ($invalid !== []) {
+            return $invalid;
+        }
+
+        if (in_array('sandbox', $modules, true) && count($modules) > 1) {
+            echo "Error: The sandbox module cannot be combined with other modules.\n";
+            return ['sandbox (exclusive)'];
+        }
+
+        return [];
     }
 }

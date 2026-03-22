@@ -2,3 +2,6 @@
 .idea
 vendor
 composer.lock
+.mtdocker/
+sandbox.php
+run
