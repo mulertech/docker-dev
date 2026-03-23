@@ -1,10 +1,9 @@
 
 # MulerTech Docker-dev
 
-___
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/mulertech/docker-dev.svg?style=flat-square)](https://packagist.org/packages/mulertech/docker-dev)
+[![GitHub PHPStan Action Status](https://img.shields.io/github/actions/workflow/status/mulertech/docker-dev/phpstan.yml?branch=main&label=phpstan&style=flat-square)](https://github.com/mulertech/docker-dev/actions/workflows/phpstan.yml)
 [![Total Downloads](https://img.shields.io/packagist/dt/mulertech/docker-dev.svg?style=flat-square)](https://packagist.org/packages/mulertech/docker-dev)
-___
 
 
 The **MulerTech Docker-dev** package provides complete Docker-based development environments for web projects with a modular, composable architecture (Apache, MySQL/PostgreSQL, Symfony, Redis, MailPit, Ollama...) and includes integrated testing capabilities.

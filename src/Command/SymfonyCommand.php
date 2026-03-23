@@ -2,12 +2,11 @@
 
 namespace MulerTech\DockerDev\Command;
 
-use MulerTech\DockerDev\Docker;
 use MulerTech\DockerDev\Composer;
+use MulerTech\DockerDev\Docker;
 
 /**
- * Class SymfonyCommand
- * @package MulerTech\DockerDev
+ * Class SymfonyCommand.
  */
 class SymfonyCommand extends BaseCommand
 {
@@ -24,6 +23,7 @@ class SymfonyCommand extends BaseCommand
         return 'symfony';
     }
 
+    /** @return array<string> */
     public function getDefaultArgs(): array
     {
         return ['list'];
@@ -34,21 +34,24 @@ class SymfonyCommand extends BaseCommand
         return true;
     }
 
+    /** @param array<string> $customArgs */
     public function execute(array $customArgs = []): void
     {
         if (!$this->composer->isSymfonyProject()) {
             echo "Error: This command is only available for Symfony projects.\n";
+
             return;
         }
 
         parent::execute($customArgs);
     }
 
+    /** @param array<string> $customArgs */
     protected function runCommand(array $customArgs = []): void
     {
         $containerName = $this->docker->getContainerName();
         $ttyFlag = (posix_isatty(STDIN)) ? '-it ' : '-i ';
-        $cmd = 'docker exec ' . $ttyFlag . $containerName . ' php bin/console' . ' ' . $this->buildCommand($this->getDefaultArgs(), $customArgs);
+        $cmd = 'docker exec '.$ttyFlag.$containerName.' php bin/console '.$this->buildCommand($this->getDefaultArgs(), $customArgs);
         passthru($cmd);
     }
 }

@@ -6,8 +6,7 @@ use MulerTech\DockerDev\Command\CommandRegistry;
 use MulerTech\DockerDev\Command\SandboxCommand;
 
 /**
- * Class Application
- * @package MulerTech\DockerDev
+ * Class Application.
  */
 class Application
 {
@@ -21,6 +20,7 @@ class Application
         $this->commandRegistry = new CommandRegistry($this->docker, $composer);
     }
 
+    /** @param array<string> $args */
     public function run(array $args): void
     {
         $arg1 = $args[1] ?? '';
@@ -105,6 +105,7 @@ class Application
         ]);
     }
 
+    /** @param array<string> $args */
     private function handleTestAi(array $args): void
     {
         $consoleArgs = array_slice($args, 2);
@@ -112,6 +113,7 @@ class Application
         $this->commandRegistry->executeCommand('test', array_merge($aiArgs, $consoleArgs));
     }
 
+    /** @param array<string> $args */
     private function handleTest(array $args): void
     {
         $consoleArgs = array_slice($args, 2);
@@ -128,6 +130,7 @@ class Application
         $this->docker->dockerComposeDown();
     }
 
+    /** @param array<string> $args */
     private function handlePhpstanAi(array $args): void
     {
         $consoleArgs = array_slice($args, 2);
@@ -135,12 +138,14 @@ class Application
         $this->commandRegistry->executeCommand('phpstan', array_merge($aiArgs, $consoleArgs));
     }
 
+    /** @param array<string> $args */
     private function handlePhpstan(array $args): void
     {
         $consoleArgs = array_slice($args, 2);
         $this->commandRegistry->executeCommand('phpstan', $consoleArgs);
     }
 
+    /** @param array<string> $args */
     private function handleCsFixerAi(array $args): void
     {
         $consoleArgs = array_slice($args, 2);
@@ -148,6 +153,7 @@ class Application
         $this->commandRegistry->executeCommand('cs-fixer', array_merge($aiArgs, $consoleArgs));
     }
 
+    /** @param array<string> $args */
     private function handleCsFixer(array $args): void
     {
         $consoleArgs = array_slice($args, 2);
@@ -175,7 +181,7 @@ class Application
             $this->docker->dockerComposeUp('-d');
         }
 
-        $cmd = $this->docker->dockerComposeCommand() . ' ps --format json';
+        $cmd = $this->docker->dockerComposeCommand().' ps --format json';
         $output = shell_exec($cmd);
         echo $output;
 
@@ -193,7 +199,7 @@ class Application
             $this->docker->dockerComposeUp('-d');
         }
 
-        $cmd = $this->docker->dockerComposeCommand() . ' ps';
+        $cmd = $this->docker->dockerComposeCommand().' ps';
         $output = shell_exec($cmd);
         echo $output;
 
@@ -205,13 +211,14 @@ class Application
     private function handleName(): void
     {
         $projectName = $this->docker->getProjectName();
-        echo "Project name : $projectName" . PHP_EOL . "Configuration CLI interpreter environment variable : COMPOSE_PROJECT_NAME=$projectName" . PHP_EOL;
+        echo "Project name : $projectName".PHP_EOL."Configuration CLI interpreter environment variable : COMPOSE_PROJECT_NAME=$projectName".PHP_EOL;
     }
 
     private function handleInit(string $modulesArg): void
     {
         if (empty($modulesArg)) {
             $this->docker->autoInitModules(true);
+
             return;
         }
 
@@ -223,8 +230,9 @@ class Application
     {
         $modules = $this->docker->loadModuleConfig();
 
-        if ($modules === []) {
+        if ([] === $modules) {
             echo "No modules configured. Run 'mtdocker init' to initialize.\n";
+
             return;
         }
 
@@ -234,12 +242,14 @@ class Application
         }
     }
 
+    /** @param array<string> $args */
     private function handleSymfony(array $args): void
     {
         $consoleArgs = array_slice($args, 2);
         $this->commandRegistry->executeCommand('symfony', $consoleArgs);
     }
 
+    /** @param array<string> $args */
     private function handleComposer(array $args): void
     {
         $consoleArgs = array_slice($args, 2);

@@ -3,8 +3,7 @@
 namespace MulerTech\DockerDev;
 
 /**
- * Class Docker
- * @package MulerTech\DockerDev
+ * Class Docker.
  */
 class Docker
 {
@@ -25,7 +24,8 @@ class Docker
     public function getContainerName(): string
     {
         $phpVersion = $this->composer->getPhpVersion();
-        return 'docker-' . basename($this->composer->getProjectDir()) . '-' . ($phpVersion === '' ? 'latest' : $phpVersion);
+
+        return 'docker-'.basename($this->composer->getProjectDir()).'-'.('' === $phpVersion ? 'latest' : $phpVersion);
     }
 
     public function getProjectName(): string
@@ -38,10 +38,11 @@ class Docker
         return basename($this->composer->getProjectDir());
     }
 
+    /** @param array<string> $modules */
     public function addToGitignore(array $modules = []): void
     {
         $projectDir = $this->composer->getProjectDir();
-        $gitignorePath = $projectDir . '/.gitignore';
+        $gitignorePath = $projectDir.'/.gitignore';
 
         $entries = ['.mtdocker/'];
         if (in_array('sandbox', $modules, true)) {
@@ -50,7 +51,7 @@ class Docker
         }
 
         if (file_exists($gitignorePath)) {
-            $gitignoreContent = file_get_contents($gitignorePath);
+            $gitignoreContent = (string) file_get_contents($gitignorePath);
             $toAdd = [];
 
             foreach ($entries as $entry) {
@@ -60,13 +61,13 @@ class Docker
                 }
             }
 
-            if ($toAdd !== []) {
-                $addition = "\n# Docker development environment\n" . implode("\n", $toAdd) . "\n";
+            if ([] !== $toAdd) {
+                $addition = "\n# Docker development environment\n".implode("\n", $toAdd)."\n";
                 file_put_contents($gitignorePath, $addition, FILE_APPEND);
-                echo "Added " . implode(', ', $toAdd) . " to .gitignore\n";
+                echo 'Added '.implode(', ', $toAdd)." to .gitignore\n";
             }
         } else {
-            $content = "# Docker development environment\n" . implode("\n", $entries) . "\n";
+            $content = "# Docker development environment\n".implode("\n", $entries)."\n";
             file_put_contents($gitignorePath, $content);
             echo "Created .gitignore with entries\n";
         }
@@ -74,41 +75,47 @@ class Docker
 
     public function getModulesPath(): string
     {
-        return __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . 'modules';
+        return __DIR__.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'templates'.DIRECTORY_SEPARATOR.'modules';
     }
 
     public function getSharedPath(): string
     {
-        return __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . 'shared';
+        return __DIR__.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'templates'.DIRECTORY_SEPARATOR.'shared';
     }
 
+    /** @param array<string> $modules */
     public function performModuleInitialization(
         array $modules,
         bool $requireConfirmation = false,
-        bool $showSuccessMessage = true
+        bool $showSuccessMessage = true,
     ): bool {
         $invalid = $this->moduleResolver->validateModules($modules);
-        if ($invalid !== []) {
-            echo "Error: Unknown module(s): " . implode(', ', $invalid) . "\n";
-            echo "Available modules: " . implode(', ', ModuleResolver::availableModules()) . "\n";
+        if ([] !== $invalid) {
+            echo 'Error: Unknown module(s): '.implode(', ', $invalid)."\n";
+            echo 'Available modules: '.implode(', ', ModuleResolver::availableModules())."\n";
+
             return false;
         }
 
         $projectDir = $this->composer->getProjectDir();
-        $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
+        $mtdockerPath = $projectDir.DIRECTORY_SEPARATOR.'.mtdocker';
 
         if (is_dir($mtdockerPath) && $requireConfirmation) {
-            echo ".mtdocker directory already exists. Do you want to replace it? (y/N): ";
-            $handle = fopen("php://stdin", "r");
-            $response = trim(fgets($handle));
+            echo '.mtdocker directory already exists. Do you want to replace it? (y/N): ';
+            $handle = fopen('php://stdin', 'r');
+            if (false === $handle) {
+                return false;
+            }
+            $response = trim((string) fgets($handle));
             fclose($handle);
 
-            if (strtolower($response) !== 'y') {
+            if ('y' !== strtolower($response)) {
                 echo "Initialization cancelled.\n";
+
                 return false;
             }
 
-            exec("rm -rf " . escapeshellarg($mtdockerPath));
+            exec('rm -rf '.escapeshellarg($mtdockerPath));
         }
 
         if (!is_dir($mtdockerPath)) {
@@ -117,7 +124,7 @@ class Docker
 
         $dirs = $this->moduleResolver->resolveDirectoriesToCreate($modules);
         foreach ($dirs as $dir) {
-            $dirPath = $mtdockerPath . DIRECTORY_SEPARATOR . $dir;
+            $dirPath = $mtdockerPath.DIRECTORY_SEPARATOR.$dir;
             if (!is_dir($dirPath)) {
                 mkdir($dirPath, 0755, true);
             }
@@ -127,8 +134,8 @@ class Docker
         $filesToCopy = $this->moduleResolver->resolveFilesToCopy($modules);
 
         foreach ($filesToCopy as $source => $target) {
-            $sourcePath = $sharedPath . DIRECTORY_SEPARATOR . $source;
-            $targetPath = $mtdockerPath . DIRECTORY_SEPARATOR . $target;
+            $sourcePath = $sharedPath.DIRECTORY_SEPARATOR.$source;
+            $targetPath = $mtdockerPath.DIRECTORY_SEPARATOR.$target;
 
             $targetDir = dirname($targetPath);
             if (!is_dir($targetDir)) {
@@ -168,7 +175,7 @@ class Docker
     public function autoInitModules(bool $requireConfirmation = false): void
     {
         $modules = $this->moduleResolver->detectModules();
-        echo "Auto-detected modules: " . implode(', ', $modules) . "\n";
+        echo 'Auto-detected modules: '.implode(', ', $modules)."\n";
 
         $this->performModuleInitialization($modules, $requireConfirmation);
     }
@@ -176,9 +183,9 @@ class Docker
     public function ensureEnvironment(): void
     {
         $projectDir = $this->composer->getProjectDir();
-        $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
-        $modulesJsonPath = $mtdockerPath . DIRECTORY_SEPARATOR . 'modules.json';
-        $oldComposePath = $mtdockerPath . DIRECTORY_SEPARATOR . 'compose.yml';
+        $mtdockerPath = $projectDir.DIRECTORY_SEPARATOR.'.mtdocker';
+        $modulesJsonPath = $mtdockerPath.DIRECTORY_SEPARATOR.'modules.json';
+        $oldComposePath = $mtdockerPath.DIRECTORY_SEPARATOR.'compose.yml';
 
         if (file_exists($modulesJsonPath)) {
             return;
@@ -186,13 +193,16 @@ class Docker
 
         if (file_exists($oldComposePath)) {
             echo "Legacy template detected in .mtdocker/. Re-initialization required for module system.\n";
-            echo "Do you want to re-initialize? (y/N): ";
-            $handle = fopen("php://stdin", "r");
-            $response = trim(fgets($handle));
+            echo 'Do you want to re-initialize? (y/N): ';
+            $handle = fopen('php://stdin', 'r');
+            if (false === $handle) {
+                return;
+            }
+            $response = trim((string) fgets($handle));
             fclose($handle);
 
-            if (strtolower($response) === 'y') {
-                exec("rm -rf " . escapeshellarg($mtdockerPath));
+            if ('y' === strtolower($response)) {
+                exec('rm -rf '.escapeshellarg($mtdockerPath));
             } else {
                 echo "Cannot continue without module configuration. Please run: mtdocker init\n";
                 exit(1);
@@ -203,17 +213,19 @@ class Docker
         $this->autoInitModules();
     }
 
+    /** @param array<string> $modules */
     public function generateEnvFile(array $modules, string $mtdockerPath): void
     {
         if (in_array('sandbox', $modules, true)) {
             $this->generateSandboxEnvFile($mtdockerPath);
+
             return;
         }
 
         $uid = getmyuid();
         $gid = getmygid();
         $phpVersion = $this->composer->getPhpVersion();
-        $phpImage = 'php:' . ($phpVersion === '' ? '' : $phpVersion . '-') . 'apache';
+        $phpImage = 'php:'.('' === $phpVersion ? '' : $phpVersion.'-').'apache';
         $projectBaseName = $this->getProjectBaseName();
         $webContainerName = $this->getContainerName();
 
@@ -231,7 +243,7 @@ class Docker
         $lines[] = 'COMPOSE_DOCKER_CLI_BUILD=1';
 
         if (in_array('frankenphp', $modules, true)) {
-            $frankenphpImage = 'dunglas/frankenphp:' . ($phpVersion === '' ? 'latest' : 'php' . $phpVersion);
+            $frankenphpImage = 'dunglas/frankenphp:'.('' === $phpVersion ? 'latest' : 'php'.$phpVersion);
             $lines[] = "FRANKENPHP_IMAGE=$frankenphpImage";
         } elseif (!in_array('apache-html', $modules, true)) {
             $lines[] = "PHP_IMAGE=$phpImage";
@@ -242,7 +254,7 @@ class Docker
         $lines[] = '# PATHS (absolute, for compose modules)';
         $lines[] = '# =================================';
         $lines[] = "MTDOCKER_PATH=$mtdockerPath";
-        $lines[] = "PROJECT_PATH=" . $this->composer->getProjectDir();
+        $lines[] = 'PROJECT_PATH='.$this->composer->getProjectDir();
 
         $lines[] = '';
         $lines[] = '# =================================';
@@ -283,33 +295,33 @@ class Docker
         $lines[] = "WEB_PORT=$webPort";
 
         if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true)) {
-            $port = $this->generatePortFromName($projectName . '-postgres');
+            $port = $this->generatePortFromName($projectName.'-postgres');
             $lines[] = "# PostgreSQL (localhost:$port)";
             $lines[] = "POSTGRES_PORT=$port";
         }
         if (in_array('mysql', $modules, true)) {
-            $port = $this->generatePortFromName($projectName . '-mysql');
+            $port = $this->generatePortFromName($projectName.'-mysql');
             $lines[] = "# MySQL (localhost:$port)";
             $lines[] = "MYSQL_PORT=$port";
         }
         if (in_array('adminer', $modules, true)) {
-            $port = $this->generatePortFromName($projectName . '-adminer');
+            $port = $this->generatePortFromName($projectName.'-adminer');
             $lines[] = "# Adminer (http://localhost:$port)";
             $lines[] = "ADMINER_PORT=$port";
         }
         if (in_array('redis', $modules, true)) {
-            $port = $this->generatePortFromName($projectName . '-redis');
+            $port = $this->generatePortFromName($projectName.'-redis');
             $lines[] = "REDIS_PORT=$port";
         }
         if (in_array('mailpit', $modules, true)) {
-            $port = $this->generatePortFromName($projectName . '-mailpit');
-            $smtpPort = $this->generatePortFromName($projectName . '-mailpit-smtp');
+            $port = $this->generatePortFromName($projectName.'-mailpit');
+            $smtpPort = $this->generatePortFromName($projectName.'-mailpit-smtp');
             $lines[] = "# MailPit web (http://localhost:$port)";
             $lines[] = "MAILPIT_PORT=$port";
             $lines[] = "MAILPIT_SMTP_PORT=$smtpPort";
         }
         if (in_array('ollama', $modules, true)) {
-            $port = $this->generatePortFromName($projectName . '-ollama');
+            $port = $this->generatePortFromName($projectName.'-ollama');
             $lines[] = "OLLAMA_PORT=$port";
         }
 
@@ -347,38 +359,51 @@ class Docker
             $lines[] = '# =================================';
             $lines[] = '# PDF GENERATION (Gotenberg)';
             $lines[] = '# =================================';
-            $lines[] = "GOTENBERG_URL=http://gotenberg:3000";
+            $lines[] = 'GOTENBERG_URL=http://gotenberg:3000';
         }
 
-        $envContent = implode("\n", $lines) . "\n";
-        file_put_contents($mtdockerPath . DIRECTORY_SEPARATOR . '.env', $envContent);
+        $envContent = implode("\n", $lines)."\n";
+        file_put_contents($mtdockerPath.DIRECTORY_SEPARATOR.'.env', $envContent);
     }
 
+    /** @param array<string> $modules */
     public function saveModuleConfig(array $modules, string $mtdockerPath): void
     {
-        $configPath = $mtdockerPath . DIRECTORY_SEPARATOR . 'modules.json';
-        file_put_contents($configPath, json_encode($modules, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+        $configPath = $mtdockerPath.DIRECTORY_SEPARATOR.'modules.json';
+        file_put_contents($configPath, json_encode($modules, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
     }
 
+    /** @return array<string> */
     public function loadModuleConfig(): array
     {
         $projectDir = $this->composer->getProjectDir();
-        $configPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker' . DIRECTORY_SEPARATOR . 'modules.json';
+        $configPath = $projectDir.DIRECTORY_SEPARATOR.'.mtdocker'.DIRECTORY_SEPARATOR.'modules.json';
 
         if (!file_exists($configPath)) {
             return [];
         }
 
-        $content = file_get_contents($configPath);
+        $content = (string) file_get_contents($configPath);
         $modules = json_decode($content, true);
 
-        return is_array($modules) ? $modules : [];
+        if (!is_array($modules)) {
+            return [];
+        }
+
+        $strings = [];
+        foreach ($modules as $module) {
+            if (is_string($module)) {
+                $strings[] = $module;
+            }
+        }
+
+        return $strings;
     }
 
     public function dockerComposeCommand(): string
     {
         $projectDir = $this->composer->getProjectDir();
-        $mtdockerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker';
+        $mtdockerPath = $projectDir.DIRECTORY_SEPARATOR.'.mtdocker';
         $modulesPath = $this->getModulesPath();
         $modules = $this->loadModuleConfig();
 
@@ -400,22 +425,22 @@ class Docker
         }
 
         foreach ($orderedModules as $module) {
-            $composeFile = $modulesPath . DIRECTORY_SEPARATOR . 'compose.' . $module . '.yml';
-            $composeFiles .= ' -f ' . $composeFile;
+            $composeFile = $modulesPath.DIRECTORY_SEPARATOR.'compose.'.$module.'.yml';
+            $composeFiles .= ' -f '.$composeFile;
         }
 
-        return $envVars . 'docker compose --env-file ' . $mtdockerPath . DIRECTORY_SEPARATOR . '.env' . $composeFiles . ' --project-name ' . $this->getProjectName();
+        return $envVars.'docker compose --env-file '.$mtdockerPath.DIRECTORY_SEPARATOR.'.env'.$composeFiles.' --project-name '.$this->getProjectName();
     }
 
     public function getWebPort(): int
     {
         $projectDir = $this->composer->getProjectDir();
-        $envPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker' . DIRECTORY_SEPARATOR . '.env';
+        $envPath = $projectDir.DIRECTORY_SEPARATOR.'.mtdocker'.DIRECTORY_SEPARATOR.'.env';
 
         if (file_exists($envPath)) {
-            $envContent = file_get_contents($envPath);
+            $envContent = (string) file_get_contents($envPath);
             if (preg_match('/WEB_PORT=(\d+)/', $envContent, $matches)) {
-                return (int)$matches[1];
+                return (int) $matches[1];
             }
         }
 
@@ -432,16 +457,16 @@ class Docker
     {
         $this->ensureEnvironment();
 
-        $command = $this->dockerComposeCommand() . ' up';
-        $command .= $arg2 === '-d' ? ' -d' : '';
+        $command = $this->dockerComposeCommand().' up';
+        $command .= '-d' === $arg2 ? ' -d' : '';
 
-        if ($arg2 === '-d') {
+        if ('-d' === $arg2) {
             echo "🚀 Starting Docker containers...\n";
 
             $exitCode = 0;
-            passthru($command . ' 2>&1', $exitCode);
+            passthru($command.' 2>&1', $exitCode);
 
-            if ($exitCode === 0) {
+            if (0 === $exitCode) {
                 echo "\n✅ All containers started successfully!\n";
                 $this->runFirstTimeSetup();
                 $this->displayWebLink();
@@ -456,26 +481,26 @@ class Docker
     public function dockerComposeDown(): void
     {
         $this->ensureEnvironment();
-        $command = $this->dockerComposeCommand() . ' down';
+        $command = $this->dockerComposeCommand().' down';
         exec($command);
     }
 
     public function isDockerUp(): bool
     {
-        return str_contains(exec('docker compose ls | grep ' . $this->getProjectName()), $this->getProjectName());
+        return str_contains((string) exec('docker compose ls | grep '.$this->getProjectName()), $this->getProjectName());
     }
 
     public function runFirstTimeSetup(): void
     {
         $projectDir = $this->composer->getProjectDir();
-        $markerPath = $projectDir . DIRECTORY_SEPARATOR . '.mtdocker' . DIRECTORY_SEPARATOR . '.setup-done';
+        $markerPath = $projectDir.DIRECTORY_SEPARATOR.'.mtdocker'.DIRECTORY_SEPARATOR.'.setup-done';
 
         if (file_exists($markerPath)) {
             return;
         }
 
         $modules = $this->loadModuleConfig();
-        if ($modules === []) {
+        if ([] === $modules) {
             return;
         }
 
@@ -485,50 +510,51 @@ class Docker
             || in_array('pgvector', $modules, true)
             || in_array('mysql', $modules, true);
 
-        if (!is_dir($projectDir . DIRECTORY_SEPARATOR . 'vendor')) {
+        if (!is_dir($projectDir.DIRECTORY_SEPARATOR.'vendor')) {
             echo "Installing Composer dependencies...\n";
-            passthru('docker exec ' . escapeshellarg($containerName) . ' composer install --no-interaction');
+            passthru('docker exec '.escapeshellarg($containerName).' composer install --no-interaction');
         }
 
         if ($isSymfony) {
-            if ($this->composer->hasFile('package.json') && !is_dir($projectDir . DIRECTORY_SEPARATOR . 'node_modules')) {
+            if ($this->composer->hasFile('package.json') && !is_dir($projectDir.DIRECTORY_SEPARATOR.'node_modules')) {
                 echo "Installing npm dependencies...\n";
-                passthru('docker exec ' . escapeshellarg($containerName) . ' npm install');
+                passthru('docker exec '.escapeshellarg($containerName).' npm install');
             }
 
             if ($this->composer->hasPackage('symfonycasts/tailwind-bundle')) {
                 echo "Building Tailwind CSS...\n";
-                passthru('docker exec ' . escapeshellarg($containerName) . ' php bin/console tailwind:build');
+                passthru('docker exec '.escapeshellarg($containerName).' php bin/console tailwind:build');
             }
 
             if ($hasDb && $this->composer->hasPackage('doctrine/doctrine-migrations-bundle')) {
                 $this->waitForDatabase($containerName, $modules);
                 echo "Running test database migrations...\n";
-                passthru('docker exec ' . escapeshellarg($containerName) . ' php bin/console doctrine:migrations:migrate --no-interaction --env=test');
+                passthru('docker exec '.escapeshellarg($containerName).' php bin/console doctrine:migrations:migrate --no-interaction --env=test');
             }
         }
 
-        file_put_contents($markerPath, date('Y-m-d H:i:s') . "\n");
+        file_put_contents($markerPath, date('Y-m-d H:i:s')."\n");
         echo "First-time setup completed.\n";
     }
 
+    /** @param array<string> $modules */
     private function waitForDatabase(string $containerName, array $modules): void
     {
         if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true)) {
-            $dbContainer = $this->getProjectBaseName() . '-postgres';
-            for ($i = 0; $i < 30; $i++) {
-                $result = exec('docker exec ' . escapeshellarg($dbContainer) . ' pg_isready -U user 2>/dev/null', $output, $exitCode);
-                if ($exitCode === 0) {
+            $dbContainer = $this->getProjectBaseName().'-postgres';
+            for ($i = 0; $i < 30; ++$i) {
+                $result = exec('docker exec '.escapeshellarg($dbContainer).' pg_isready -U user 2>/dev/null', $output, $exitCode);
+                if (0 === $exitCode) {
                     return;
                 }
                 sleep(1);
             }
             echo "Warning: Database may not be ready yet.\n";
         } elseif (in_array('mysql', $modules, true)) {
-            $dbContainer = $this->getProjectBaseName() . '-mysql';
-            for ($i = 0; $i < 30; $i++) {
-                exec('docker exec ' . escapeshellarg($dbContainer) . ' mysqladmin ping -u user -ppassword 2>/dev/null', $output, $exitCode);
-                if ($exitCode === 0) {
+            $dbContainer = $this->getProjectBaseName().'-mysql';
+            for ($i = 0; $i < 30; ++$i) {
+                exec('docker exec '.escapeshellarg($dbContainer).' mysqladmin ping -u user -ppassword 2>/dev/null', $output, $exitCode);
+                if (0 === $exitCode) {
                     return;
                 }
                 sleep(1);
@@ -547,7 +573,7 @@ class Docker
 
     private function findAvailablePortFromBase(int $basePort): int
     {
-        for ($port = $basePort; $port < $basePort + 100; $port++) {
+        for ($port = $basePort; $port < $basePort + 100; ++$port) {
             $connection = @fsockopen('127.0.0.1', $port, $errno, $errstr, 1);
             if (!$connection) {
                 return $port;
@@ -560,7 +586,7 @@ class Docker
 
     public function getSandboxContainerName(): string
     {
-        return $this->getProjectBaseName() . '-sandbox';
+        return $this->getProjectBaseName().'-sandbox';
     }
 
     private function generateSandboxEnvFile(string $mtdockerPath): void
@@ -571,33 +597,33 @@ class Docker
         $lines[] = '# =================================';
         $lines[] = '# PHP VERSION';
         $lines[] = '# =================================';
-        $lines[] = 'PHP_VERSION_TAG=' . ($phpVersion === '' ? '8.4' : $phpVersion);
+        $lines[] = 'PHP_VERSION_TAG='.('' === $phpVersion ? '8.4' : $phpVersion);
         $lines[] = '';
         $lines[] = '# =================================';
         $lines[] = '# PATHS';
         $lines[] = '# =================================';
-        $lines[] = 'PROJECT_PATH=' . $this->composer->getProjectDir();
+        $lines[] = 'PROJECT_PATH='.$this->composer->getProjectDir();
         $lines[] = '';
         $lines[] = '# =================================';
         $lines[] = '# CONTAINER CONFIGURATION';
         $lines[] = '# =================================';
-        $lines[] = 'CONTAINER_NAME_SANDBOX=' . $this->getSandboxContainerName();
+        $lines[] = 'CONTAINER_NAME_SANDBOX='.$this->getSandboxContainerName();
 
-        $envContent = implode("\n", $lines) . "\n";
-        file_put_contents($mtdockerPath . DIRECTORY_SEPARATOR . '.env', $envContent);
+        $envContent = implode("\n", $lines)."\n";
+        file_put_contents($mtdockerPath.DIRECTORY_SEPARATOR.'.env', $envContent);
     }
 
     public function initSandboxFiles(): void
     {
         $projectDir = $this->composer->getProjectDir();
-        $sharedPath = $this->getSharedPath() . DIRECTORY_SEPARATOR . 'sandbox';
+        $sharedPath = $this->getSharedPath().DIRECTORY_SEPARATOR.'sandbox';
 
-        $sandboxPath = $projectDir . DIRECTORY_SEPARATOR . 'sandbox.php';
+        $sandboxPath = $projectDir.DIRECTORY_SEPARATOR.'sandbox.php';
         if (!file_exists($sandboxPath)) {
-            copy($sharedPath . DIRECTORY_SEPARATOR . 'sandbox.php', $sandboxPath);
+            copy($sharedPath.DIRECTORY_SEPARATOR.'sandbox.php', $sandboxPath);
         }
 
-        $runPath = $projectDir . DIRECTORY_SEPARATOR . 'run';
+        $runPath = $projectDir.DIRECTORY_SEPARATOR.'run';
         if (!file_exists($runPath)) {
             file_put_contents($runPath, "#!/bin/bash\n./mtdocker sandbox\n");
             chmod($runPath, 0755);
@@ -619,19 +645,20 @@ class Docker
     public function isSandboxUp(): bool
     {
         $containerName = $this->getSandboxContainerName();
-        exec('docker ps --filter name=' . escapeshellarg($containerName) . ' --filter status=running --format "{{.Names}}"', $output);
+        exec('docker ps --filter name='.escapeshellarg($containerName).' --filter status=running --format "{{.Names}}"', $output);
+
         return in_array($containerName, $output, true);
     }
 
     public function sandboxUp(): void
     {
-        $command = $this->dockerComposeCommand() . ' up -d';
-        exec($command . ' 2>&1');
+        $command = $this->dockerComposeCommand().' up -d';
+        exec($command.' 2>&1');
     }
 
     public function sandboxDown(): void
     {
-        $command = $this->dockerComposeCommand() . ' down';
-        exec($command . ' 2>&1');
+        $command = $this->dockerComposeCommand().' down';
+        exec($command.' 2>&1');
     }
 }

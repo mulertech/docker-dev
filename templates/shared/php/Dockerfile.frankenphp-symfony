@@ -52,6 +52,15 @@ RUN apt-get update && apt-get install -y \
 # Install Yarn using npm (more reliable method)
 RUN npm install -g yarn
 
+ARG INSTALL_MYSQL_CLIENT=0
+
+# Install MySQL client (mysqldump, mysql) only if needed
+RUN if [ "$INSTALL_MYSQL_CLIENT" = "1" ]; then \
+    apt-get update && apt-get install -y \
+    default-mysql-client \
+    && rm -rf /var/lib/apt/lists/*; \
+    fi
+
 ARG INSTALL_WKHTMLTOPDF=0
 
 # Install wkhtmltopdf only if needed (for knplabs/knp-snappy-bundle)

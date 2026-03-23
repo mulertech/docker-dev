@@ -1,7 +1,7 @@
-.claude
 .idea
+.phpunit*
 vendor
+.php-cs-fixer.cache
+clover.xml
 composer.lock
 .mtdocker/
-sandbox.php
-run

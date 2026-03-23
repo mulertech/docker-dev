@@ -13,6 +13,7 @@ abstract class BaseCommand implements CommandInterface
         $this->docker = $docker;
     }
 
+    /** @param array<string> $customArgs */
     public function execute(array $customArgs = []): void
     {
         $dockerUp = $this->docker->isDockerUp();
@@ -30,11 +31,17 @@ abstract class BaseCommand implements CommandInterface
         }
     }
 
+    /** @param array<string> $customArgs */
     abstract protected function runCommand(array $customArgs = []): void;
 
+    /**
+     * @param array<string> $defaultArgs
+     * @param array<string> $customArgs
+     */
     protected function buildCommand(array $defaultArgs, array $customArgs = []): string
     {
-        $allArgs = $customArgs !== [] ? $customArgs : $defaultArgs;
+        $allArgs = [] !== $customArgs ? $customArgs : $defaultArgs;
+
         return implode(' ', array_map('escapeshellarg', $allArgs));
     }
 }

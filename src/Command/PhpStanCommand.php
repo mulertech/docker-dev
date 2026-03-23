@@ -3,8 +3,7 @@
 namespace MulerTech\DockerDev\Command;
 
 /**
- * Class PhpStanCommand
- * @package MulerTech\DockerDev
+ * Class PhpStanCommand.
  */
 class PhpStanCommand extends BaseCommand
 {
@@ -13,6 +12,7 @@ class PhpStanCommand extends BaseCommand
         return 'phpstan';
     }
 
+    /** @return array<string> */
     public function getDefaultArgs(): array
     {
         return ['analyse', '--memory-limit=1G'];
@@ -23,11 +23,12 @@ class PhpStanCommand extends BaseCommand
         return true;
     }
 
+    /** @param array<string> $customArgs */
     protected function runCommand(array $customArgs = []): void
     {
         $containerName = $this->docker->getContainerName();
         $ttyFlag = (posix_isatty(STDIN)) ? '-it ' : '-i ';
-        $cmd = 'docker exec ' . $ttyFlag . $containerName . ' ./vendor/bin/phpstan' . ' ' . $this->buildCommand($this->getDefaultArgs(), $customArgs);
+        $cmd = 'docker exec '.$ttyFlag.$containerName.' ./vendor/bin/phpstan '.$this->buildCommand($this->getDefaultArgs(), $customArgs);
         passthru($cmd);
     }
 }

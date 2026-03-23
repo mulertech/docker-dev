@@ -3,8 +3,7 @@
 namespace MulerTech\DockerDev\Command;
 
 /**
- * Class CsFixerCommand
- * @package MulerTech\DockerDev
+ * Class CsFixerCommand.
  */
 class CsFixerCommand extends BaseCommand
 {
@@ -13,6 +12,7 @@ class CsFixerCommand extends BaseCommand
         return 'cs-fixer';
     }
 
+    /** @return array<string> */
     public function getDefaultArgs(): array
     {
         return ['fix', 'src'];
@@ -23,11 +23,12 @@ class CsFixerCommand extends BaseCommand
         return true;
     }
 
+    /** @param array<string> $customArgs */
     protected function runCommand(array $customArgs = []): void
     {
         $containerName = $this->docker->getContainerName();
         $ttyFlag = (posix_isatty(STDIN)) ? '-it ' : '-i ';
-        $cmd = 'docker exec ' . $ttyFlag . $containerName . ' ./vendor/bin/php-cs-fixer' . ' ' . $this->buildCommand($this->getDefaultArgs(), $customArgs);
+        $cmd = 'docker exec '.$ttyFlag.$containerName.' ./vendor/bin/php-cs-fixer '.$this->buildCommand($this->getDefaultArgs(), $customArgs);
         passthru($cmd);
     }
 }

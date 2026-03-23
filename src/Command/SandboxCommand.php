@@ -25,7 +25,7 @@ class SandboxCommand
 
         $containerName = $this->docker->getSandboxContainerName();
         $ttyFlag = (posix_isatty(STDIN)) ? '-it ' : '-i ';
-        $cmd = 'docker exec ' . $ttyFlag . escapeshellarg($containerName) . ' php /sandbox/sandbox.php';
+        $cmd = 'docker exec '.$ttyFlag.escapeshellarg($containerName).' php /sandbox/sandbox.php';
         passthru($cmd, $exitCode);
 
         if (!$wasUp) {

@@ -2,15 +2,15 @@
 
 namespace MulerTech\DockerDev\Command;
 
-use MulerTech\DockerDev\Docker;
 use MulerTech\DockerDev\Composer;
+use MulerTech\DockerDev\Docker;
 
 /**
- * Class CommandRegistry
- * @package MulerTech\DockerDev
+ * Class CommandRegistry.
  */
 class CommandRegistry
 {
+    /** @var array<string, CommandInterface> */
     private array $commands = [];
 
     public function __construct(Docker $docker, Composer $composer)
@@ -32,10 +32,12 @@ class CommandRegistry
         return isset($this->commands[$name]);
     }
 
+    /** @param array<string> $args */
     public function executeCommand(string $name, array $args = []): void
     {
         if (!$this->hasCommand($name)) {
             echo "Unknown command: $name\n";
+
             return;
         }
 

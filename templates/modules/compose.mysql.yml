@@ -1,5 +1,8 @@
 services:
   web:
+    build:
+      args:
+        INSTALL_MYSQL_CLIENT: 1
     environment:
       - DATABASE_HOST=mysql
       - DATABASE_PORT=3306

@@ -19,6 +19,15 @@ RUN install-php-extensions \
     opcache \
     pcov
 
+ARG INSTALL_MYSQL_CLIENT=0
+
+# Install MySQL client (mysqldump, mysql) only if needed
+RUN if [ "$INSTALL_MYSQL_CLIENT" = "1" ]; then \
+    apt-get update && apt-get install -y \
+    default-mysql-client \
+    && rm -rf /var/lib/apt/lists/*; \
+    fi
+
 # Copy Composer from official image
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 

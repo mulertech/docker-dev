@@ -3,8 +3,7 @@
 namespace MulerTech\DockerDev\Command;
 
 /**
- * Class PhpunitCommand
- * @package MulerTech\DockerDev
+ * Class PhpunitCommand.
  */
 class PhpunitCommand extends BaseCommand
 {
@@ -13,6 +12,7 @@ class PhpunitCommand extends BaseCommand
         return 'test';
     }
 
+    /** @return array<string> */
     public function getDefaultArgs(): array
     {
         return [];
@@ -23,12 +23,12 @@ class PhpunitCommand extends BaseCommand
         return true;
     }
 
+    /** @param array<string> $customArgs */
     protected function runCommand(array $customArgs = []): void
     {
         $containerName = $this->docker->getContainerName();
         $ttyFlag = (posix_isatty(STDIN)) ? '-it ' : '-i ';
-        $cmd = 'docker exec ' . $ttyFlag . $containerName . ' ./vendor/bin/phpunit' . ' ' . $this->buildCommand($this->getDefaultArgs(), $customArgs);
+        $cmd = 'docker exec '.$ttyFlag.$containerName.' ./vendor/bin/phpunit '.$this->buildCommand($this->getDefaultArgs(), $customArgs);
         passthru($cmd);
     }
-
 }

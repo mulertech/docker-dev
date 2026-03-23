@@ -3,16 +3,15 @@
 namespace MulerTech\DockerDev;
 
 /**
- * Class Composer
- * @package MulerTech\DockerDev
+ * Class Composer.
  */
 class Composer
 {
     public function getProjectDir(): string
     {
-        $projectDir = getcwd();
+        $projectDir = (string) getcwd();
 
-        while (!file_exists($projectDir . '/composer.json')) {
+        while (!file_exists($projectDir.'/composer.json')) {
             $projectDir = dirname($projectDir);
         }
 
@@ -21,28 +20,31 @@ class Composer
 
     public function getPhpVersion(): string
     {
-        $composer = file_get_contents($this->getProjectDir() . '/composer.json');
+        $composer = (string) file_get_contents($this->getProjectDir().'/composer.json');
         preg_match('/"php": "(.+)"/', $composer, $matches);
         $php = $matches[1] ?? '';
 
-        if ($php === '') {
+        if ('' === $php) {
             return '';
         }
 
         // Extract PHP version from various constraint formats: ^8.3, ~8.2, >=8.4, 8.1.*, etc.
         preg_match('/(\d+\.\d+)/', $php, $matches);
+
         return $matches[1] ?? '';
     }
 
     public function dbNeeded(): bool
     {
-        $composer = file_get_contents($this->getProjectDir() . '/composer.json');
+        $composer = (string) file_get_contents($this->getProjectDir().'/composer.json');
+
         return str_contains($composer, 'ext-pdo');
     }
 
     public function isSymfonyProject(): bool
     {
-        $composer = file_get_contents($this->getProjectDir() . '/composer.json');
+        $composer = (string) file_get_contents($this->getProjectDir().'/composer.json');
+
         return str_contains($composer, 'symfony/framework-bundle')
             || str_contains($composer, 'symfony/symfony')
             || str_contains($composer, 'symfony/kernel');
@@ -50,7 +52,8 @@ class Composer
 
     public function needsPgvectorAndOllama(): bool
     {
-        $composer = file_get_contents($this->getProjectDir() . '/composer.json');
+        $composer = (string) file_get_contents($this->getProjectDir().'/composer.json');
+
         return str_contains($composer, 'pgvector')
             || str_contains($composer, 'openai')
             || str_contains($composer, 'anthropic')
@@ -61,24 +64,27 @@ class Composer
 
     public function needsWkhtmltopdf(): bool
     {
-        $composer = file_get_contents($this->getProjectDir() . '/composer.json');
+        $composer = (string) file_get_contents($this->getProjectDir().'/composer.json');
+
         return str_contains($composer, 'knplabs/knp-snappy-bundle');
     }
 
     public function needsGotenberg(): bool
     {
-        $composer = file_get_contents($this->getProjectDir() . '/composer.json');
+        $composer = (string) file_get_contents($this->getProjectDir().'/composer.json');
+
         return str_contains($composer, 'sensiolabs/gotenberg-bundle');
     }
 
     public function hasPackage(string $package): bool
     {
-        $composer = file_get_contents($this->getProjectDir() . '/composer.json');
+        $composer = (string) file_get_contents($this->getProjectDir().'/composer.json');
+
         return str_contains($composer, $package);
     }
 
     public function hasFile(string $relativePath): bool
     {
-        return file_exists($this->getProjectDir() . DIRECTORY_SEPARATOR . $relativePath);
+        return file_exists($this->getProjectDir().DIRECTORY_SEPARATOR.$relativePath);
     }
 }

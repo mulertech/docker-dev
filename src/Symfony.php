@@ -3,8 +3,7 @@
 namespace MulerTech\DockerDev;
 
 /**
- * Class Symfony
- * @package MulerTech\DockerDev
+ * Class Symfony.
  */
 class Symfony
 {
@@ -18,16 +17,16 @@ class Symfony
     public function configureDoctrine(): void
     {
         $projectDir = $this->composer->getProjectDir();
-        $doctrinePath = $projectDir . '/config/packages/doctrine.yaml';
+        $doctrinePath = $projectDir.'/config/packages/doctrine.yaml';
 
         if (!file_exists($doctrinePath)) {
             return; // Skip if doctrine.yaml doesn't exist
         }
 
-        $doctrineContent = file_get_contents($doctrinePath);
+        $doctrineContent = (string) file_get_contents($doctrinePath);
 
         // Check if already modified (avoid duplicate modifications)
-        if (str_contains($doctrineContent, "# Modified by mulertech/docker-dev package for Docker environment")) {
+        if (str_contains($doctrineContent, '# Modified by mulertech/docker-dev package for Docker environment')) {
             return; // Already configured
         }
 
@@ -52,16 +51,16 @@ class Symfony
     public function configureMailer(): void
     {
         $projectDir = $this->composer->getProjectDir();
-        $mailerPath = $projectDir . '/config/packages/mailer.yaml';
+        $mailerPath = $projectDir.'/config/packages/mailer.yaml';
 
         if (!file_exists($mailerPath)) {
             return; // Skip if mailer.yaml doesn't exist
         }
 
-        $mailerContent = file_get_contents($mailerPath);
+        $mailerContent = (string) file_get_contents($mailerPath);
 
         // Check if already modified (avoid duplicate modifications)
-        if (str_contains($mailerContent, "# Modified by mulertech/docker-dev package for Docker environment")) {
+        if (str_contains($mailerContent, '# Modified by mulertech/docker-dev package for Docker environment')) {
             return; // Already configured
         }
 

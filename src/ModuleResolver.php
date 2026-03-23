@@ -3,8 +3,7 @@
 namespace MulerTech\DockerDev;
 
 /**
- * Class ModuleResolver
- * @package MulerTech\DockerDev
+ * Class ModuleResolver.
  */
 class ModuleResolver
 {
@@ -15,6 +14,7 @@ class ModuleResolver
         $this->composer = $composer;
     }
 
+    /** @return array<string> */
     public function detectModules(): array
     {
         $modules = [];
@@ -41,7 +41,7 @@ class ModuleResolver
             $modules[] = 'frankenphp';
             $modules[] = 'postgres';
             $modules[] = 'adminer';
-        } elseif ($this->composer->getPhpVersion() !== '') {
+        } elseif ('' !== $this->composer->getPhpVersion()) {
             $modules[] = 'frankenphp';
         } else {
             $modules[] = 'apache-html';
@@ -50,6 +50,7 @@ class ModuleResolver
         return $modules;
     }
 
+    /** @param array<string> $modules */
     public function resolveDockerfile(array $modules): string
     {
         if (in_array('sandbox', $modules, true)) {
@@ -57,26 +58,31 @@ class ModuleResolver
         }
 
         if (in_array('apache-html', $modules, true)) {
-            return 'html' . DIRECTORY_SEPARATOR . 'Dockerfile';
+            return 'html'.DIRECTORY_SEPARATOR.'Dockerfile';
         }
 
         $isFrankenPhp = in_array('frankenphp', $modules, true);
 
         if (in_array('symfony', $modules, true)) {
-            return 'php' . DIRECTORY_SEPARATOR . ($isFrankenPhp ? 'Dockerfile.frankenphp-symfony' : 'Dockerfile.symfony');
+            return 'php'.DIRECTORY_SEPARATOR.($isFrankenPhp ? 'Dockerfile.frankenphp-symfony' : 'Dockerfile.symfony');
         }
 
         if ($isFrankenPhp) {
-            return 'php' . DIRECTORY_SEPARATOR . 'Dockerfile.frankenphp';
+            return 'php'.DIRECTORY_SEPARATOR.'Dockerfile.frankenphp';
         }
 
         if (in_array('mysql', $modules, true)) {
-            return 'php' . DIRECTORY_SEPARATOR . 'Dockerfile.mysql';
+            return 'php'.DIRECTORY_SEPARATOR.'Dockerfile.mysql';
         }
 
-        return 'php' . DIRECTORY_SEPARATOR . 'Dockerfile.simple';
+        return 'php'.DIRECTORY_SEPARATOR.'Dockerfile.simple';
     }
 
+    /**
+     * @param array<string> $modules
+     *
+     * @return array<string, string>
+     */
     public function resolveFilesToCopy(array $modules): array
     {
         if (in_array('sandbox', $modules, true)) {
@@ -135,6 +141,11 @@ class ModuleResolver
         return $files;
     }
 
+    /**
+     * @param array<string> $modules
+     *
+     * @return array<string>
+     */
     public function resolveDirectoriesToCreate(array $modules): array
     {
         if (in_array('sandbox', $modules, true)) {
@@ -169,6 +180,7 @@ class ModuleResolver
         return array_unique($dirs);
     }
 
+    /** @return array<string> */
     public static function availableModules(): array
     {
         return [
@@ -188,17 +200,23 @@ class ModuleResolver
         ];
     }
 
+    /**
+     * @param array<string> $modules
+     *
+     * @return array<string>
+     */
     public function validateModules(array $modules): array
     {
         $available = self::availableModules();
         $invalid = array_diff($modules, $available);
 
-        if ($invalid !== []) {
+        if ([] !== $invalid) {
             return $invalid;
         }
 
         if (in_array('sandbox', $modules, true) && count($modules) > 1) {
             echo "Error: The sandbox module cannot be combined with other modules.\n";
+
             return ['sandbox (exclusive)'];
         }
 
