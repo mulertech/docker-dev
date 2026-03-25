@@ -488,16 +488,17 @@ Configure PHPStorm to work with your Docker development environment:
 3. Add new interpreter: `From Docker, Vagrant, VM, WSL, Remote...`
 4. Configure Docker Compose interpreter:
    - Server: `Docker` (create new if needed)
-   - Configuration files: select the compose module files from `vendor/mulertech/docker-dev/templates/modules/` matching your active modules (see `./vendor/bin/mtdocker modules`)
-   - Service: `apache`
-   - Environment variables: `COMPOSE_PROJECT_NAME=<project name>` (get with `./vendor/bin/mtdocker name`)
+   - Image name: `docker-<project name>-<php version with - instead of .>:latest` (e.g., `docker-myproject-8-2:latest`)
+   - PHP Interpreter path: `php`
+5. Go to `PHP` -> `Docker container` -> clic on the folder icon
+6. Update `Container parh` to `/app`
 
 **PHPUnit Integration:**
 1. Go to `PHP` → `Test Frameworks`
 2. Add `PHPUnit by Remote Interpreter`
 3. Select your Docker interpreter
-4. Path to script: `/var/www/html/vendor/autoload.php`
-5. Default configuration file: `/var/www/html/phpunit.dist.xml` (needed for Symfony projects)
+4. Path to script: `/app/vendor/autoload.php`
+5. Default configuration file: `/app/phpunit.dist.xml` (needed for Symfony projects)
 
 ## Architecture
 
