@@ -156,7 +156,13 @@ class Docker
         if (in_array('symfony', $modules, true)) {
             $symfony = new Symfony($this->composer);
             $symfony->configureDoctrine();
+            $symfony->configureDoctrineTest();
             $symfony->configureMailer();
+
+            $hasDatabase = array_intersect(['postgres', 'pgvector', 'mysql'], $modules) !== [];
+            if ($hasDatabase) {
+                $symfony->generateTestEnvLocal($modules, $mtdockerPath.DIRECTORY_SEPARATOR.'.env');
+            }
         }
 
         if ($showSuccessMessage) {
