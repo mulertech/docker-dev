@@ -449,8 +449,9 @@ For Symfony projects, the AI/RAG packages in `composer.json` determine whether `
 - Saves the active module list in `.mtdocker/modules.json`
 - Generates deterministic ports based on project name to avoid conflicts
 - **Automatically adds `.mtdocker/` to `.gitignore`** (best practice)
-- **For Symfony projects**: Automatically configures Doctrine settings for PostgreSQL into `doctrine.yaml`
-- **For Symfony projects**: Automatically configures Mailer to use MailPit into `mailer.yaml`
+- **For Symfony projects**: Automatically configures Doctrine settings for PostgreSQL into `doctrine.yaml` (including `when@test` override for PHPStorm compatibility)
+- **For Symfony projects**: Automatically configures Mailer to use MailPit into `mailer.yaml` (including `when@test` override for PHPStorm compatibility)
+- **For Symfony projects with database**: Generates `.env.test.local` with database connection settings for PHPStorm (`host.docker.internal`, dynamic port, credentials)
 - Provides a complete development environment ready to use
 
 #### Migration from legacy templates
@@ -486,19 +487,24 @@ Configure PHPStorm to work with your Docker development environment:
 1. Open PHPStorm settings → `PHP`
 2. Click `...` next to `CLI Interpreter` field
 3. Add new interpreter: `From Docker, Vagrant, VM, WSL, Remote...`
-4. Configure Docker Compose interpreter:
+4. Configure Docker interpreter:
    - Server: `Docker` (create new if needed)
-   - Image name: `docker-<project name>-<php version with - instead of .>:latest` (e.g., `docker-myproject-8-2:latest`)
+   - Image name: `docker-<project name>-<php version with - instead of .>-web:latest` (e.g., `docker-myproject-8-2-web:latest`)
    - PHP Interpreter path: `php`
-5. Go to `PHP` -> `Docker container` -> clic on the folder icon
-6. Update `Container parh` to `/app`
+5. Go to `PHP` → `Docker container` → click on the folder icon
+6. Add a volume binding:
+   - **Host path**: your project root (e.g., `/Users/you/projects/myproject`)
+   - **Container path**: `/app` (for FrankenPHP) or `/var/www/html` (for Apache-PHP)
 
 **PHPUnit Integration:**
 1. Go to `PHP` → `Test Frameworks`
 2. Add `PHPUnit by Remote Interpreter`
 3. Select your Docker interpreter
-4. Path to script: `/app/vendor/autoload.php`
-5. Default configuration file: `/app/phpunit.dist.xml` (needed for Symfony projects)
+4. Use Composer autoloader:
+   - Path to script: `/app/vendor/autoload.php` (FrankenPHP) or `/var/www/html/vendor/autoload.php` (Apache-PHP)
+5. Default configuration file: `/app/phpunit.dist.xml` (FrankenPHP) or `/var/www/html/phpunit.dist.xml` (Apache-PHP)
+
+> **Note for Symfony projects:** PHPStorm runs tests outside of Docker Compose, so environment variables and secrets from compose files are not available. The `mtdocker init` command automatically generates a `.env.test.local` file with the database connection settings (`DATABASE_HOST=host.docker.internal`, dynamic port, credentials) and configures `when@test` overrides in `doctrine.yaml` and `mailer.yaml` to use direct environment variables instead of file-based secrets. This file is regenerated on each `mtdocker init` to keep ports in sync.
 
 ## Architecture
 
