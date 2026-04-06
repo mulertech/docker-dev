@@ -3,6 +3,7 @@
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/mulertech/docker-dev.svg?style=flat-square)](https://packagist.org/packages/mulertech/docker-dev)
 [![GitHub PHPStan Action Status](https://img.shields.io/github/actions/workflow/status/mulertech/docker-dev/phpstan.yml?branch=main&label=phpstan&style=flat-square)](https://github.com/mulertech/docker-dev/actions/workflows/phpstan.yml)
+[![GitHub Security Action Status](https://img.shields.io/github/actions/workflow/status/mulertech/docker-dev/security.yml?branch=main&label=security&style=flat-square)](https://github.com/mulertech/docker-dev/actions/workflows/security.yml)
 [![Total Downloads](https://img.shields.io/packagist/dt/mulertech/docker-dev.svg?style=flat-square)](https://packagist.org/packages/mulertech/docker-dev)
 
 

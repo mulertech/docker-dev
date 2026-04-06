@@ -2,7 +2,12 @@
   "name": "mulertech/docker-dev",
   "description": "The MulerTech Docker-dev package",
   "type": "library",
-  "keywords": ["php", "docker", "development", "symfony"],
+  "keywords": [
+    "php",
+    "docker",
+    "development",
+    "symfony"
+  ],
   "minimum-stability": "stable",
   "license": "MIT",
   "authors": [
@@ -12,7 +17,7 @@
     }
   ],
   "require": {
-    "php": "^8.3",
+    "php": "^8.4",
     "ext-posix": "*"
   },
   "require-dev": {
@@ -35,5 +40,8 @@
   ],
   "prefer-install": {
     "*": "source"
+  },
+  "config": {
+    "sort-packages": true
   }
 }
