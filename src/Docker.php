@@ -9,11 +9,17 @@ class Docker
 {
     private Composer $composer;
     private ModuleResolver $moduleResolver;
+    private bool $quiet = false;
 
     public function __construct(Composer $composer)
     {
         $this->composer = $composer;
         $this->moduleResolver = new ModuleResolver($composer);
+    }
+
+    public function setQuiet(bool $quiet): void
+    {
+        $this->quiet = $quiet;
     }
 
     public function getModuleResolver(): ModuleResolver
@@ -467,17 +473,27 @@ class Docker
         $command .= '-d' === $arg2 ? ' -d' : '';
 
         if ('-d' === $arg2) {
-            echo "🚀 Starting Docker containers...\n";
+            if ($this->quiet) {
+                exec($command.' 2>&1', $output, $exitCode);
 
-            $exitCode = 0;
-            passthru($command.' 2>&1', $exitCode);
+                if (0 !== $exitCode) {
+                    echo "Error starting containers (exit code: $exitCode)\n";
+                }
 
-            if (0 === $exitCode) {
-                echo "\n✅ All containers started successfully!\n";
                 $this->runFirstTimeSetup();
-                $this->displayWebLink();
             } else {
-                echo "\n❌ Error starting containers (exit code: $exitCode)\n";
+                echo "🚀 Starting Docker containers...\n";
+
+                $exitCode = 0;
+                passthru($command.' 2>&1', $exitCode);
+
+                if (0 === $exitCode) {
+                    echo "\n✅ All containers started successfully!\n";
+                    $this->runFirstTimeSetup();
+                    $this->displayWebLink();
+                } else {
+                    echo "\n❌ Error starting containers (exit code: $exitCode)\n";
+                }
             }
         } else {
             passthru($command);
@@ -517,30 +533,49 @@ class Docker
             || in_array('mysql', $modules, true);
 
         if (!is_dir($projectDir.DIRECTORY_SEPARATOR.'vendor')) {
-            echo "Installing Composer dependencies...\n";
-            passthru('docker exec '.escapeshellarg($containerName).' composer install --no-interaction');
+            if (!$this->quiet) {
+                echo "Installing Composer dependencies...\n";
+            }
+            $this->quietPassthru('docker exec '.escapeshellarg($containerName).' composer install --no-interaction');
         }
 
         if ($isSymfony) {
             if ($this->composer->hasFile('package.json') && !is_dir($projectDir.DIRECTORY_SEPARATOR.'node_modules')) {
-                echo "Installing npm dependencies...\n";
-                passthru('docker exec '.escapeshellarg($containerName).' npm install');
+                if (!$this->quiet) {
+                    echo "Installing npm dependencies...\n";
+                }
+                $this->quietPassthru('docker exec '.escapeshellarg($containerName).' npm install');
             }
 
             if ($this->composer->hasPackage('symfonycasts/tailwind-bundle')) {
-                echo "Building Tailwind CSS...\n";
-                passthru('docker exec '.escapeshellarg($containerName).' php bin/console tailwind:build');
+                if (!$this->quiet) {
+                    echo "Building Tailwind CSS...\n";
+                }
+                $this->quietPassthru('docker exec '.escapeshellarg($containerName).' php bin/console tailwind:build');
             }
 
             if ($hasDb && $this->composer->hasPackage('doctrine/doctrine-migrations-bundle')) {
                 $this->waitForDatabase($containerName, $modules);
-                echo "Running test database migrations...\n";
-                passthru('docker exec '.escapeshellarg($containerName).' php bin/console doctrine:migrations:migrate --no-interaction --env=test');
+                if (!$this->quiet) {
+                    echo "Running test database migrations...\n";
+                }
+                $this->quietPassthru('docker exec '.escapeshellarg($containerName).' php bin/console doctrine:migrations:migrate --no-interaction --env=test');
             }
         }
 
         file_put_contents($markerPath, date('Y-m-d H:i:s')."\n");
-        echo "First-time setup completed.\n";
+        if (!$this->quiet) {
+            echo "First-time setup completed.\n";
+        }
+    }
+
+    private function quietPassthru(string $command): void
+    {
+        if ($this->quiet) {
+            exec($command.' 2>&1');
+        } else {
+            passthru($command);
+        }
     }
 
     /** @param array<string> $modules */

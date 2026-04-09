@@ -98,8 +98,14 @@ class Application
         $this->commandRegistry->executeCommand('test', ['--coverage-html', './.phpunit.cache/coverage']);
     }
 
+    private function enableQuietMode(): void
+    {
+        $this->docker->setQuiet(true);
+    }
+
     private function handleTestCoverageAi(): void
     {
+        $this->enableQuietMode();
         $this->commandRegistry->executeCommand('test', [
             '--coverage-text', '--colors=never', '--no-progress',
         ]);
@@ -108,6 +114,7 @@ class Application
     /** @param array<string> $args */
     private function handleTestAi(array $args): void
     {
+        $this->enableQuietMode();
         $consoleArgs = array_slice($args, 2);
         $aiArgs = ['--no-progress', '--colors=never'];
         $this->commandRegistry->executeCommand('test', array_merge($aiArgs, $consoleArgs));
@@ -133,6 +140,7 @@ class Application
     /** @param array<string> $args */
     private function handlePhpstanAi(array $args): void
     {
+        $this->enableQuietMode();
         $consoleArgs = array_slice($args, 2);
         $aiArgs = ['analyse', '--memory-limit=1G', '--no-progress', '--error-format=json'];
         $this->commandRegistry->executeCommand('phpstan', array_merge($aiArgs, $consoleArgs));
@@ -148,6 +156,7 @@ class Application
     /** @param array<string> $args */
     private function handleCsFixerAi(array $args): void
     {
+        $this->enableQuietMode();
         $consoleArgs = array_slice($args, 2);
         $aiArgs = ['fix', 'src', '--format=json', '--no-ansi', '--show-progress=none'];
         $this->commandRegistry->executeCommand('cs-fixer', array_merge($aiArgs, $consoleArgs));
@@ -162,6 +171,7 @@ class Application
 
     private function handleAllAi(): void
     {
+        $this->enableQuietMode();
         $this->handleCsFixerAi([]);
         $this->handleTestAi([]);
         $this->handlePhpstanAi([]);
@@ -174,6 +184,7 @@ class Application
 
     private function handlePsAi(): void
     {
+        $this->enableQuietMode();
         $this->docker->ensureEnvironment();
         $dockerUp = $this->docker->isDockerUp();
 
