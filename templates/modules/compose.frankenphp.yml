@@ -16,7 +16,6 @@ services:
       - ${PROJECT_PATH}:/app
       - ${MTDOCKER_PATH}/php/Caddyfile:/etc/caddy/Caddyfile
     environment:
-      - PHP_CS_FIXER_IGNORE_ENV=1
       - SERVER_NAME=:80
     networks:
       - mtdocker-network
