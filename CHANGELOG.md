@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/SemVer).
 
+## v3.2.4 - 2026-04-23
+
+- PHP_CS_FIXER_IGNORE_ENV environment variable removed from frankenphp and apache-php compose modules.
+  This variable was deprecated in PHP CS Fixer 3.x and will be removed in 4.0.
+  Projects needing to run PHP CS Fixer on an unsupported PHP version should use ->setUnsupportedPhpVersionAllowed(true) in their .php-cs-fixer.dist.php config instead.
+
 ## v3.2.3 - 2026-04-09
 
 Add quiet mode for Docker commands to reduce output noise
