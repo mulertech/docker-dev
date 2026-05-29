@@ -338,6 +338,7 @@ class Docker
         }
 
         if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true)) {
+            $serverVersion = in_array('pgvector', $modules, true) ? '17.0' : '16.0';
             $lines[] = '';
             $lines[] = '# =================================';
             $lines[] = '# DATABASE CONFIGURATION';
@@ -345,6 +346,8 @@ class Docker
             $lines[] = 'DB_NAME=db';
             $lines[] = 'DB_USER=user';
             $lines[] = 'DB_PASSWORD=password';
+            $lines[] = '# Doctrine server_version (consumed in config/packages/doctrine.yaml)';
+            $lines[] = "DATABASE_SERVER_VERSION=$serverVersion";
         }
 
         if (in_array('mysql', $modules, true)) {
@@ -356,6 +359,8 @@ class Docker
             $lines[] = 'DB_USER=user';
             $lines[] = 'DB_PASSWORD=password';
             $lines[] = 'DB_ROOT_PASSWORD=root';
+            $lines[] = '# Doctrine server_version (consumed in config/packages/doctrine.yaml)';
+            $lines[] = 'DATABASE_SERVER_VERSION=8.0';
         }
 
         if ($this->composer->needsWkhtmltopdf()) {

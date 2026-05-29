@@ -9,6 +9,7 @@ services:
       - DATABASE_PATH=/db
       - DATABASE_SCHEME=mysql
       - DATABASE_QUERY=serverVersion=8.0
+      - DATABASE_SERVER_VERSION=${DATABASE_SERVER_VERSION}
       - DATABASE_USER=${DB_USER}
       - DATABASE_PASS=${DB_PASSWORD}
     depends_on:

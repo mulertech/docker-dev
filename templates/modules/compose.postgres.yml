@@ -5,6 +5,7 @@ services:
       - DATABASE_PORT=5432
       - DATABASE_NAME=${DB_NAME}
       - DATABASE_USER=${DB_USER}
+      - DATABASE_SERVER_VERSION=${DATABASE_SERVER_VERSION}
       - DATABASE_PASSWORD_FILE=/run/secrets/db_password
     secrets:
       - db_password

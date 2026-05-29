@@ -450,7 +450,7 @@ For Symfony projects, the AI/RAG packages in `composer.json` determine whether `
 - Saves the active module list in `.mtdocker/modules.json`
 - Generates deterministic ports based on project name to avoid conflicts
 - **Automatically adds `.mtdocker/` to `.gitignore`** (best practice)
-- **For Symfony projects**: Automatically configures Doctrine settings for PostgreSQL into `doctrine.yaml` (including `when@test` override for PHPStorm compatibility)
+- **For Symfony projects**: Automatically configures Doctrine settings for PostgreSQL into `doctrine.yaml` (including `when@test` override for PHPStorm compatibility, and `server_version: '%env(default::DATABASE_SERVER_VERSION)%'` driven by the `DATABASE_SERVER_VERSION` variable so the same key works locally and in production)
 - **For Symfony projects**: Automatically configures Mailer to use MailPit into `mailer.yaml` (including `when@test` override for PHPStorm compatibility)
 - **For Symfony projects with database**: Generates `.env.test.local` with database connection settings for PHPStorm (`host.docker.internal`, dynamic port, credentials)
 - Provides a complete development environment ready to use

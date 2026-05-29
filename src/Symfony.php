@@ -25,9 +25,20 @@ class Symfony
 
         $doctrineContent = (string) file_get_contents($doctrinePath);
 
+        $updatedContent = $this->applyDoctrineDockerConfig($doctrineContent);
+        $updatedContent = $this->applyDoctrineServerVersion($updatedContent);
+
+        if ($updatedContent !== $doctrineContent) {
+            file_put_contents($doctrinePath, $updatedContent);
+            echo "Updated config/packages/doctrine.yaml for Docker environment\n";
+        }
+    }
+
+    private function applyDoctrineDockerConfig(string $content): string
+    {
         // Check if already modified (avoid duplicate modifications)
-        if (str_contains($doctrineContent, '# Modified by mulertech/docker-dev package for Docker environment')) {
-            return; // Already configured
+        if (str_contains($content, '# Modified by mulertech/docker-dev package for Docker environment')) {
+            return $content;
         }
 
         // Replace the DATABASE_URL configuration with flexible fallback configuration
@@ -40,12 +51,18 @@ class Symfony
         password: '%env(trim:file:DATABASE_PASSWORD_FILE)%'
         driver: 'pdo_pgsql'";
 
-        $updatedContent = str_replace($oldConfig, $newConfig, $doctrineContent);
+        return str_replace($oldConfig, $newConfig, $content);
+    }
 
-        if ($updatedContent !== $doctrineContent) {
-            file_put_contents($doctrinePath, $updatedContent);
-            echo "Updated config/packages/doctrine.yaml for Docker environment\n";
+    private function applyDoctrineServerVersion(string $content): string
+    {
+        $target = "server_version: '%env(default::DATABASE_SERVER_VERSION)%'";
+
+        if (str_contains($content, $target)) {
+            return $content;
         }
+
+        return (string) preg_replace('/^(\h*)#?\h*server_version:[^\r\n]*/m', '$1'.$target, $content, 1);
     }
 
     public function configureDoctrineTest(): void
@@ -114,6 +131,10 @@ class Symfony
             'DATABASE_PASSWORD=password',
             "DATABASE_DRIVER=$dbDriver",
         ];
+
+        if (preg_match('/^DATABASE_SERVER_VERSION=(.+)$/m', $envContent, $matches)) {
+            $lines[] = 'DATABASE_SERVER_VERSION='.$matches[1];
+        }
 
         file_put_contents($envTestLocalPath, implode("\n", $lines)."\n");
     }
