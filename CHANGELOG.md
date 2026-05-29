@@ -42,72 +42,182 @@ New Methods
 - Symfony::generateTestEnvLocal() — Generates .env.test.local with dynamic database connection values read from .mtdocker/.env
 - Symfony::configureMailerTest() — Adds dsn: '%env(MAILER_DSN)%' override in the when@test block of mailer.yaml
 
-## [Unreleased]
+## v3.2.0 - 2026-03-22
 
-### Added
+Added a sandbox mode for experimenting, learning, or taking PHP exams with zero configuration. An ultra-lightweight php:cli-alpine container (~30 MB) starts in ~1 second.
 
-- **Composer Command**: New `composer` command to run Composer commands inside Docker container
-  - Execute any Composer command (install, update, require, remove, etc.)
-  - Follows the same Docker lifecycle management as other commands
-  - Example: `./vendor/bin/mtdocker composer require vendor/package`
-  
+Getting started:
+git clone https://github.com/mulertech/docker-dev.git && cd docker-dev && ./mtdocker sandbox && code .
 
-## [2.0.0] - 2025-10-31
+What's new:
+- New ./mtdocker sandbox command: creates a sandbox.php file at the project root, initializes the Docker environment, and executes the script inside the container
+- Generated ./run script for quick re-execution after editing
+- Built-in dump() and dd() helper functions for debugging with ANSI/HTML color formatting
+- New sandbox module (standalone, cannot be combined with other modules)
+- No Docker build required — uses the php:cli-alpine image directly
 
-### Added
+## v3.1.4 - 2026-03-19
 
-- **Object-Oriented Architecture**: Complete refactoring from procedural to clean OO design
-- **Custom Arguments Support**: All commands now accept additional arguments (e.g., `phpstan --generate-baseline`, `cs-fixer --dry-run`)
-- **Modular Command System**: Extensible architecture for adding new commands
-- **CommandInterface and BaseCommand**: Standardized command structure
-- **CommandRegistry**: Centralized command management and routing
-- **Architecture Documentation**: Added detailed architecture section in README
+Remove old test command options
 
-### Changed
+## v3.1.3 - 2026-03-19
 
-- **Application Class**: Refactored main application logic with switch-case instead of elseif chains
-- **Command Names**: Renamed `TestCommand` to `PhpunitCommand` for future extensibility
-- **Error Handling**: Improved GID conflict resolution in Dockerfiles
-- **Permission Management**: Enhanced UID/GID handling for better file permissions
-- **Code Organization**: Moved from single procedural file to organized class structure
+Add first-time setup process for Docker environment initialization
 
-### Fixed
+## v3.1.2 - 2026-03-19
 
-- **GID Conflicts**: Resolved Docker build failures when host GID conflicts with container system groups
-- **Project Directory Detection**: Fixed `.mtdocker` creation in wrong location (vendor/ instead of project root)
-- **Dockerfile Logic**: Improved user creation logic with fallback mechanisms
+Add AI-optimized command handlers and update README with AI agent commands
 
-### Technical Improvements
+## v3.1.1 - 2026-03-17
 
-- **Separation of Concerns**: Clear separation between Composer analysis, Docker operations, and Symfony configurations
-- **Testability**: Classes can now be unit tested independently
-- **Maintainability**: Easier to add new commands and modify existing functionality
-- **Type Safety**: Better use of interfaces and abstract classes
+Replace xdebug with pcov
 
-## [1.0.0] - 2025-08-26
+## v3.1.0 - 2026-03-03
 
-### Added
+Add Gotenberg module for pdf creation and rename Apache service to Web in Docker configurations and update related links and environment variables
 
-- **Initial Release**: Complete Docker-based development environment package
-- **Multiple Templates**: Support for Apache, MySQL, PostgreSQL, and Symfony environments
-- **Auto-Detection**: Smart project type detection based on composer.json
-- **Integrated Tools**: PHPUnit, PHPStan, and PHP-CS-Fixer integration
-- **Symfony Support**: Automatic Doctrine and Mailer configuration
-- **Port Management**: Deterministic port generation to avoid conflicts
-- **Environment Management**: Complete Docker Compose setup and management
+## v3.0.0 - 2026-03-03
 
-### Features
+v3.0.0 — Modular Docker Compose Architecture
 
-- **Template System**: apache-simple, apache-mysql, symfony, apache-html
-- **Zero-Configuration**: Auto-initialization when running commands
-- **Git Integration**: Automatic .gitignore management
-- **IDE Support**: PHPStorm configuration helpers
-- **Database Initialization**: SQL file support for database setup
-- **Container Lifecycle**: Smart start/stop based on command needs
+Breaking Changes
 
-### Infrastructure
+- Modular system replaces monolithic templates. The 5 fixed templates (apache-simple, apache-mysql, apache-html, symfony, symfony-pgvector-ollama) are replaced by 11 composable modules that can be freely combined.
+- Existing .mtdocker/ directories must be re-initialized. Running any mtdocker command will detect the legacy compose.yml and propose automatic re-initialization.
+- mtdocker init syntax changed. Instead of a template name (mtdocker init symfony), pass a comma-separated list of modules (mtdocker init frankenphp,symfony,postgres,redis,mailpit,adminer) or omit arguments for auto-detection.
 
-- **Docker Integration**: Full Docker Compose environment management
-- **User Permissions**: Proper UID/GID mapping for file permissions
-- **Port Conflict Resolution**: Deterministic port assignment
-- **Template Auto-Detection**: composer.json analysis for optimal template selection
+New Features
+
+- FrankenPHP as default PHP server. All auto-detected configurations now use FrankenPHP (Caddy-based) instead of Apache + mod_php. Apache remains available via the apache-php module for manual selection.
+- 11 composable modules: frankenphp, apache-php, apache-html, symfony, postgres, mysql, pgvector, redis, mailpit, adminer, ollama.
+- mtdocker modules command. Displays the active modules for the current project.
+- New ModuleResolver class. Handles auto-detection of modules based on composer.json analysis.
+- Docker Compose multi-file merge. Modules are combined via docker compose -f ... -f ..., allowing any combination of services.
+- PostgreSQL 16 replaces PostgreSQL 15 for the standard postgres module.
+- PostgreSQL as default database. Projects with ext-pdo now get frankenphp + postgres + adminer instead of the former apache-mysql.
+
+Smart Auto-Detection
+
+| Project type | Modules activated |
+|--------------------|-------------------|
+| Symfony + AI packages | `frankenphp`, `symfony`, `pgvector`, `ollama`, `redis`, `mailpit`, `adminer` |
+| Symfony | `frankenphp`, `symfony`, `postgres`, `redis`, `mailpit`, `adminer` |
+| PHP + database (ext-pdo) | `frankenphp`, `postgres`, `adminer` |
+| PHP | `frankenphp` |
+| Static HTML | `apache-html` |
+
+Migration
+
+Existing projects using the old template system will be prompted to re-initialize when running any mtdocker command. The new modules.json file in .mtdocker/ tracks the active module configuration.
+
+## v2.0.10 - 2026-03-02
+
+Replace shell_exec with passthru in command execution for better output handling
+
+## v2.0.9 - 2026-02-18
+
+Add support for file-based secrets for database password and mailer DSN in Docker configuration
+
+## v2.0.8 - 2026-02-15
+
+Add support for Xdebug coverage in PHPUnit Docker command
+
+## v2.0.7 - 2026-02-15
+
+Add support for text coverage report in testing commands (for AI)
+
+## v2.0.6 - 2025-12-23
+
+New command "composer" to run Composer commands inside Docker container
+
+## v2.0.5 - 2025-12-16
+
+Add new template based on Symfony with Pgvector and Ollama services
+
+## v2.0.4 - 2025-11-25
+
+Increase the memory_limit from 256M to 512M in the php.ini file
+
+## v2.0.3 - 2025-11-16
+
+Install wkhtmltopdf and wkhtmltoimage, replace MailHog with MailPit.
+
+## v2.0.2 - 2025-11-12
+
+Add support for dynamic tty flag in Docker command executions
+
+## v2.0.1 - 2025-10-31
+
+Fix autoload detection in mtdocker
+
+## v2.0.0 - 2025-10-31
+
+Added
+- Object-Oriented Architecture : Complete refactoring from procedural to clean OO design
+- Custom Arguments Support : All commands now accept additional arguments (e.g., `phpstan --generate-baseline`, `cs-fixer --dry-run`)
+- Modular Command System : Extensible architecture for adding new commands
+- CommandInterface and BaseCommand : Standardized command structure
+- CommandRegistry : Centralized command management and routing
+- Architecture Documentation : Added detailed architecture section in README
+
+Changed
+- Application Class : Refactored main application logic with switch-case instead of elseif chains
+- Command Names : Renamed `TestCommand` to `PhpunitCommand` for future extensibility
+- Error Handling : Improved GID conflict resolution in Dockerfiles
+- Permission Management : Enhanced UID/GID handling for better file permissions
+- Code Organization : Moved from single procedural file to organized class structure
+
+Fixed
+- GID Conflicts : Resolved Docker build failures when host GID conflicts with container system groups
+- Project Directory Detection : Fixed `.mtdocker` creation in wrong location (vendor/ instead of project root)
+- Dockerfile Logic : Improved user creation logic with fallback mechanisms
+
+Technical Improvements
+- Separation of Concerns : Clear separation between Composer analysis, Docker operations, and Symfony configurations
+- Testability : Classes can now be unit tested independently
+- Maintainability : Easier to add new commands and modify existing functionality
+- Type Safety : Better use of interfaces and abstract classes
+
+## v1.0.10 - 2025-10-09
+
+Add link command to show the Apache server url
+
+## v1.0.9 - 2025-09-26
+
+Replace pgAdmin with Adminer for PostgreSQL management and update configuration
+
+## v1.0.8 - 2025-09-26
+
+Migrate database configuration from MySQL to PostgreSQL in Symfony Docker setup
+
+## v1.0.7 - 2025-09-26
+
+Add Mac OS compatibility
+
+## v1.0.6 - 2025-09-18
+
+Maintenance release
+
+## v1.0.5 - 2025-09-18
+
+Maintenance release
+
+## v1.0.4 - 2025-09-04
+
+Maintenance release
+
+## v1.0.3 - 2025-08-28
+
+Add Symfony console command support
+
+## v1.0.2 - 2025-08-26
+
+Maintenance release
+
+## v1.0.1 - 2025-08-26
+
+Maintenance release
+
+## v1.0.0 - 2025-08-26
+
+Initial release
