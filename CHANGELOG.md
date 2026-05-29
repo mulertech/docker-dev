@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/SemVer).
 
+## v3.3.0 - 2026-05-29
+
+Per-environment Doctrine server_version via DATABASE_SERVER_VERSION
+
+- The generated `.mtdocker/.env` now defines `DATABASE_SERVER_VERSION` with the local database version (postgres 16.0, pgvector 17.0, mysql 8.0), passed to the web container by the postgres/pgvector/mysql compose modules.
+- `Symfony::configureDoctrine()` now sets `server_version: '%env(default::DATABASE_SERVER_VERSION)%'` in `config/packages/doctrine.yaml` (uncommenting the default Symfony key), aligning local config with the production `DATABASE_SERVER_VERSION` env var.
+- `Symfony::generateTestEnvLocal()` propagates `DATABASE_SERVER_VERSION` into `.env.test.local` for PHPStorm test runs.
+
 ## v3.2.4 - 2026-04-23
 
 - PHP_CS_FIXER_IGNORE_ENV environment variable removed from frankenphp and apache-php compose modules.
