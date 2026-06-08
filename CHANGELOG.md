@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/SemVer).
 
+## v3.4.0 - 2026-06-08
+
+New `postgis` module for geospatial projects
+
+- Added the `postgis` module (`postgis/postgis:16-3.5`), a PostgreSQL 16 base with the PostGIS spatial extension enabled on both the main and test databases via `templates/shared/db/init-user-postgis.sql`.
+- Auto-detection: Symfony projects requiring `longitude-one/doctrine-spatial`, `jsor/doctrine-postgis`, or any `postgis` dependency now activate `frankenphp, symfony, postgis, redis, mailpit, adminer`.
+- The module reuses the PostgreSQL plumbing (port generation, container naming, `DATABASE_SERVER_VERSION`, `waitForDatabase` via `pg_isready`, first-time setup and test `.env.local` generation).
+
 ## v3.3.0 - 2026-05-29
 
 Per-environment Doctrine server_version via DATABASE_SERVER_VERSION
@@ -50,6 +58,7 @@ Getting started:
 git clone https://github.com/mulertech/docker-dev.git && cd docker-dev && ./mtdocker sandbox && code .
 
 What's new:
+
 - New ./mtdocker sandbox command: creates a sandbox.php file at the project root, initializes the Docker environment, and executes the script inside the container
 - Generated ./run script for quick re-execution after editing
 - Built-in dump() and dd() helper functions for debugging with ANSI/HTML color formatting
@@ -153,6 +162,7 @@ Fix autoload detection in mtdocker
 ## v2.0.0 - 2025-10-31
 
 Added
+
 - Object-Oriented Architecture : Complete refactoring from procedural to clean OO design
 - Custom Arguments Support : All commands now accept additional arguments (e.g., `phpstan --generate-baseline`, `cs-fixer --dry-run`)
 - Modular Command System : Extensible architecture for adding new commands
@@ -161,6 +171,7 @@ Added
 - Architecture Documentation : Added detailed architecture section in README
 
 Changed
+
 - Application Class : Refactored main application logic with switch-case instead of elseif chains
 - Command Names : Renamed `TestCommand` to `PhpunitCommand` for future extensibility
 - Error Handling : Improved GID conflict resolution in Dockerfiles
@@ -168,11 +179,13 @@ Changed
 - Code Organization : Moved from single procedural file to organized class structure
 
 Fixed
+
 - GID Conflicts : Resolved Docker build failures when host GID conflicts with container system groups
 - Project Directory Detection : Fixed `.mtdocker` creation in wrong location (vendor/ instead of project root)
 - Dockerfile Logic : Improved user creation logic with fallback mechanisms
 
 Technical Improvements
+
 - Separation of Concerns : Clear separation between Composer analysis, Docker operations, and Symfony configurations
 - Testability : Classes can now be unit tested independently
 - Maintainability : Easier to add new commands and modify existing functionality
