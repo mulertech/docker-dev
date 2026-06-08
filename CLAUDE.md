@@ -66,19 +66,25 @@ The system uses composable modules instead of monolithic templates. Each module 
 | `postgres` | PostgreSQL 16 |
 | `mysql` | MySQL 8 |
 | `pgvector` | PostgreSQL 17 + pgvector extension |
+| `postgis` | PostgreSQL 16 + PostGIS spatial extension |
 | `redis` | Redis 7 |
 | `mailpit` | MailPit (SMTP + web UI) |
 | `adminer` | Adminer (DB web UI) |
 | `ollama` | Ollama AI |
+| `gotenberg` | Gotenberg 8 (PDF/document conversion API, separate container via `GOTENBERG_URL`) |
+| `sandbox` | PHP CLI (Alpine). **Standalone**, cannot be combined with other modules. |
 
 **Shared files** in `templates/shared/` are copied into `.mtdocker/` during init (Dockerfiles, Caddyfile, configs, SQL scripts, secrets).
 
 **Module detection** via `ModuleResolver::detectModules()`:
 - Symfony project → `frankenphp, symfony, postgres, redis, mailpit, adminer`
 - Symfony + AI packages → `frankenphp, symfony, pgvector, ollama, redis, mailpit, adminer`
+- Symfony + spatial packages (`longitude-one/doctrine-spatial`, `jsor/doctrine-postgis`, `postgis`) → `frankenphp, symfony, postgis, redis, mailpit, adminer`
 - DB needed (ext-pdo) → `frankenphp, postgres, adminer`
 - PHP project → `frankenphp`
 - No PHP → `apache-html`
+
+For Symfony stacks, `gotenberg` is appended (regardless of the database choice) when `sensiolabs/gotenberg-bundle` is detected.
 
 **Init with explicit modules:** `mtdocker init frankenphp,postgres,adminer`
 
@@ -101,7 +107,7 @@ On the first `mtdocker up -d` or `mtdocker all` in a fresh project or worktree, 
 3. `php bin/console tailwind:build` — if `symfonycasts/tailwind-bundle` is detected (Symfony module only)
 4. `php bin/console doctrine:migrations:migrate --no-interaction --env=test` — if `doctrine/doctrine-migrations-bundle` is detected and a database module is active (Symfony module only)
 
-**Database readiness:** Before running migrations, `waitForDatabase()` polls the database container (up to 30s) using `pg_isready` (PostgreSQL/pgvector) or `mysqladmin ping` (MySQL).
+**Database readiness:** Before running migrations, `waitForDatabase()` polls the database container (up to 30s) using `pg_isready` (PostgreSQL/pgvector/postgis) or `mysqladmin ping` (MySQL).
 
 **Re-running setup:** Delete `.mtdocker/.setup-done` to force the setup to run again on next command.
 

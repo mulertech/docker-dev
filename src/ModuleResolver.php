@@ -26,6 +26,8 @@ class ModuleResolver
             if ($this->composer->needsPgvectorAndOllama()) {
                 $modules[] = 'pgvector';
                 $modules[] = 'ollama';
+            } elseif ($this->composer->needsPostgis()) {
+                $modules[] = 'postgis';
             } else {
                 $modules[] = 'postgres';
             }
@@ -125,6 +127,11 @@ class ModuleResolver
             $files['secrets/db_password'] = 'secrets/db_password';
         }
 
+        if (in_array('postgis', $modules, true)) {
+            $files['db/init-user-postgis.sql'] = 'db/init-user.sql';
+            $files['secrets/db_password'] = 'secrets/db_password';
+        }
+
         if (in_array('mysql', $modules, true)) {
             $files['db/init-user-mysql.sql'] = 'db/init-user.sql';
         }
@@ -160,12 +167,12 @@ class ModuleResolver
             $dirs[] = 'php';
         }
 
-        if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true) || in_array('mysql', $modules, true)) {
+        if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true) || in_array('postgis', $modules, true) || in_array('mysql', $modules, true)) {
             $dirs[] = 'db';
             $dirs[] = 'sql';
         }
 
-        if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true) || in_array('symfony', $modules, true)) {
+        if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true) || in_array('postgis', $modules, true) || in_array('symfony', $modules, true)) {
             $dirs[] = 'secrets';
         }
 
@@ -189,6 +196,7 @@ class ModuleResolver
             'apache-html',
             'symfony',
             'postgres',
+            'postgis',
             'mysql',
             'pgvector',
             'redis',

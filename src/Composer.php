@@ -62,6 +62,15 @@ class Composer
             || str_contains($composer, 'yethee/tiktoken');
     }
 
+    public function needsPostgis(): bool
+    {
+        $composer = (string) file_get_contents($this->getProjectDir().'/composer.json');
+
+        return str_contains($composer, 'longitude-one/doctrine-spatial')
+            || str_contains($composer, 'jsor/doctrine-postgis')
+            || str_contains($composer, 'postgis');
+    }
+
     public function needsWkhtmltopdf(): bool
     {
         $composer = (string) file_get_contents($this->getProjectDir().'/composer.json');

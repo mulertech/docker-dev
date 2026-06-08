@@ -396,10 +396,12 @@ Each module is an independent Docker Compose file that can be freely combined wi
 | `postgres` | PostgreSQL 16 | PostgreSQL database with volume persistence and SQL init scripts. |
 | `mysql` | MySQL 8 | MySQL database with volume persistence, UTF-8 charset, and SQL init scripts. |
 | `pgvector` | PostgreSQL 17 + pgvector | PostgreSQL with vector embeddings extension for AI/RAG projects. |
+| `postgis` | PostGIS 16 (PostgreSQL 16) | PostgreSQL with the PostGIS spatial extension enabled (main + test databases) for geospatial projects. |
 | `redis` | Redis 7 | Redis cache server (Alpine). |
 | `mailpit` | MailPit | Local mail server with SMTP capture and web interface. |
 | `adminer` | Adminer | Database web administration interface with auto-login and dark theme. |
 | `ollama` | Ollama | Local LLM server for AI/RAG projects. |
+| `gotenberg` | Gotenberg 8 | Stateless PDF/document conversion API (runs as a separate container, reached by the web service via `GOTENBERG_URL`). |
 | `sandbox` | PHP CLI (Alpine) | **Standalone.** Lightweight PHP sandbox for quick experimentation. Cannot be combined with other modules. |
 
 #### Smart auto-detection
@@ -409,12 +411,13 @@ When running `./vendor/bin/mtdocker init` without arguments, modules are automat
 | Detection criteria | Modules activated |
 |--------------------|-------------------|
 | `symfony/framework-bundle`, `symfony/symfony`, or `symfony/kernel` detected **+ AI packages** (`pgvector`, `openai`, `anthropic`, `langchain`, `chromadb`, `yethee/tiktoken`) | `frankenphp`, `symfony`, `pgvector`, `ollama`, `redis`, `mailpit`, `adminer` |
+| `symfony/framework-bundle`, `symfony/symfony`, or `symfony/kernel` detected **+ spatial packages** (`longitude-one/doctrine-spatial`, `jsor/doctrine-postgis`, `postgis`) | `frankenphp`, `symfony`, `postgis`, `redis`, `mailpit`, `adminer` |
 | `symfony/framework-bundle`, `symfony/symfony`, or `symfony/kernel` detected | `frankenphp`, `symfony`, `postgres`, `redis`, `mailpit`, `adminer` |
 | `ext-pdo` requirement detected | `frankenphp`, `postgres`, `adminer` |
 | PHP version detected (any PHP project) | `frankenphp` |
 | No PHP detected | `apache-html` |
 
-For Symfony projects, the AI/RAG packages in `composer.json` determine whether `pgvector` + `ollama` or standard `postgres` is activated. To use Apache instead of FrankenPHP, pass the modules explicitly (e.g., `mtdocker init apache-php,symfony,postgres,redis,mailpit,adminer`).
+For Symfony projects, the packages in `composer.json` determine whether `pgvector` + `ollama` (AI/RAG), `postgis` (spatial), or standard `postgres` is activated. Independently of the database choice, the `gotenberg` module is added to the Symfony stack whenever `sensiolabs/gotenberg-bundle` is detected. To use Apache instead of FrankenPHP, pass the modules explicitly (e.g., `mtdocker init apache-php,symfony,postgres,redis,mailpit,adminer`).
 
 #### Module combinations examples
 
@@ -424,6 +427,9 @@ For Symfony projects, the AI/RAG packages in `composer.json` determine whether `
 
 # Symfony AI/RAG stack
 ./vendor/bin/mtdocker init frankenphp,symfony,pgvector,ollama,redis,mailpit,adminer
+
+# Symfony spatial stack (PostGIS)
+./vendor/bin/mtdocker init frankenphp,symfony,postgis,redis,mailpit,adminer
 
 # PHP + PostgreSQL + Adminer
 ./vendor/bin/mtdocker init frankenphp,postgres,adminer
@@ -460,7 +466,7 @@ If your project was initialized with a previous version (using monolithic templa
 
 ### Database Initialization
 
-For configurations with database modules (`mysql`, `postgres`, or `pgvector`), you can easily initialize your database with custom SQL files:
+For configurations with database modules (`mysql`, `postgres`, `pgvector`, or `postgis`), you can easily initialize your database with custom SQL files:
 
 ```sh
 # 1. Copy your SQL files to the sql directory
@@ -473,7 +479,7 @@ cp schema.sql .mtdocker/sql/01-schema.sql
 ```
 
 **File execution order:**
-- `01-init-user.sql` (system - for MySQL creates user with network permissions, for PostgreSQL provides additional setup if needed)
+- `01-init-user.sql` (system - for MySQL creates user with network permissions, for PostgreSQL provides additional setup if needed; the `postgis` module uses a dedicated variant that enables the PostGIS extension on the main and test databases)
 - Your SQL files in alphabetical order (e.g., `01-schema.sql`, `02-data.sql`)
 - Supports `.sql`, `.sql.gz`, and `.sh` files
 
@@ -522,7 +528,7 @@ Configure PHPStorm to work with your Docker development environment:
 - **`CommandRegistry`**: Command routing and management
 
 ### Module System
-- **`templates/modules/`**: 11 independent Docker Compose files, one per module. They stay in the package and are referenced via absolute paths.
+- **`templates/modules/`**: 14 independent Docker Compose files, one per module. They stay in the package and are referenced via absolute paths.
 - **`templates/shared/`**: Build context files (Dockerfiles, configs, SQL scripts, secrets) copied into `.mtdocker/` during initialization.
 - **Docker Compose merge**: Modules are combined via `docker compose -f ... -f ...`. The base module (`apache-php` or `apache-html`) is always loaded first, then overlays are applied in order.
 

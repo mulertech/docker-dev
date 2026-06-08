@@ -165,7 +165,7 @@ class Docker
             $symfony->configureDoctrineTest();
             $symfony->configureMailer();
 
-            $hasDatabase = array_intersect(['postgres', 'pgvector', 'mysql'], $modules) !== [];
+            $hasDatabase = array_intersect(['postgres', 'pgvector', 'postgis', 'mysql'], $modules) !== [];
             if ($hasDatabase) {
                 $symfony->generateTestEnvLocal($modules, $mtdockerPath.DIRECTORY_SEPARATOR.'.env');
             }
@@ -274,7 +274,7 @@ class Docker
         $lines[] = '# =================================';
         $lines[] = "CONTAINER_NAME_WEB=$webContainerName";
 
-        if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true)) {
+        if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true) || in_array('postgis', $modules, true)) {
             $lines[] = "CONTAINER_NAME_POSTGRES=$projectBaseName-postgres";
         }
         if (in_array('mysql', $modules, true)) {
@@ -306,7 +306,7 @@ class Docker
         $lines[] = "# Web server (http://localhost:$webPort)";
         $lines[] = "WEB_PORT=$webPort";
 
-        if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true)) {
+        if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true) || in_array('postgis', $modules, true)) {
             $port = $this->generatePortFromName($projectName.'-postgres');
             $lines[] = "# PostgreSQL (localhost:$port)";
             $lines[] = "POSTGRES_PORT=$port";
@@ -337,7 +337,7 @@ class Docker
             $lines[] = "OLLAMA_PORT=$port";
         }
 
-        if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true)) {
+        if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true) || in_array('postgis', $modules, true)) {
             $serverVersion = in_array('pgvector', $modules, true) ? '17.0' : '16.0';
             $lines[] = '';
             $lines[] = '# =================================';
@@ -535,6 +535,7 @@ class Docker
         $isSymfony = in_array('symfony', $modules, true);
         $hasDb = in_array('postgres', $modules, true)
             || in_array('pgvector', $modules, true)
+            || in_array('postgis', $modules, true)
             || in_array('mysql', $modules, true);
 
         if (!is_dir($projectDir.DIRECTORY_SEPARATOR.'vendor')) {
@@ -586,7 +587,7 @@ class Docker
     /** @param array<string> $modules */
     private function waitForDatabase(string $containerName, array $modules): void
     {
-        if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true)) {
+        if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true) || in_array('postgis', $modules, true)) {
             $dbContainer = $this->getProjectBaseName().'-postgres';
             for ($i = 0; $i < 30; ++$i) {
                 $result = exec('docker exec '.escapeshellarg($dbContainer).' pg_isready -U user 2>/dev/null', $output, $exitCode);
