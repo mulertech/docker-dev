@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/SemVer).
 
+## v3.5.0 - 2026-06-10
+
+Caddyfile variant for geospatial (postgis) Symfony projects
+
+- New `templates/shared/php/Caddyfile.symfony-postgis`, selected by `ModuleResolver` when the `frankenphp`, `symfony` and `postgis` modules are combined: same as the Symfony Caddyfile plus `Cache-Control: public, max-age=31536000, immutable` on `/tiles/*` (versioned map assets — PMTiles, glyphs; Caddy's file server natively supports the range requests required by the pmtiles protocol).
+
 ## v3.4.1 - 2026-06-08
 
 Fix: add Apple Silicon (ARM64) support for the PostGIS module by switching to the multi-arch `imresamu/postgis` image
