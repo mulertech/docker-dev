@@ -105,7 +105,9 @@ class ModuleResolver
 
         if ($isFrankenPhp) {
             if (in_array('symfony', $modules, true)) {
-                $files['php/Caddyfile.symfony'] = 'php/Caddyfile';
+                // Geospatial projects get extra Caddy rules (immutable cache on /tiles/*).
+                $caddyfile = in_array('postgis', $modules, true) ? 'php/Caddyfile.symfony-postgis' : 'php/Caddyfile.symfony';
+                $files[$caddyfile] = 'php/Caddyfile';
             } else {
                 $files['php/Caddyfile'] = 'php/Caddyfile';
             }

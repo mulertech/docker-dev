@@ -165,7 +165,7 @@ class Docker
             $symfony->configureDoctrineTest();
             $symfony->configureMailer();
 
-            $hasDatabase = array_intersect(['postgres', 'pgvector', 'postgis', 'mysql'], $modules) !== [];
+            $hasDatabase = [] !== array_intersect(['postgres', 'pgvector', 'postgis', 'mysql'], $modules);
             if ($hasDatabase) {
                 $symfony->generateTestEnvLocal($modules, $mtdockerPath.DIRECTORY_SEPARATOR.'.env');
             }

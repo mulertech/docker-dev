@@ -396,7 +396,7 @@ Each module is an independent Docker Compose file that can be freely combined wi
 | `postgres` | PostgreSQL 16 | PostgreSQL database with volume persistence and SQL init scripts. |
 | `mysql` | MySQL 8 | MySQL database with volume persistence, UTF-8 charset, and SQL init scripts. |
 | `pgvector` | PostgreSQL 17 + pgvector | PostgreSQL with vector embeddings extension for AI/RAG projects. |
-| `postgis` | PostGIS 16 (PostgreSQL 16) | PostgreSQL with the PostGIS spatial extension enabled (main + test databases) for geospatial projects. |
+| `postgis` | PostGIS 16 (PostgreSQL 16) | PostgreSQL with the PostGIS spatial extension enabled (main + test databases) for geospatial projects. With FrankenPHP + Symfony, the generated Caddyfile also serves `public/tiles/*` (PMTiles, glyphs) with a long immutable cache. |
 | `redis` | Redis 7 | Redis cache server (Alpine). |
 | `mailpit` | MailPit | Local mail server with SMTP capture and web interface. |
 | `adminer` | Adminer | Database web administration interface with auto-login and dark theme. |

@@ -1,0 +1,16 @@
+{
+    frankenphp
+    order php_server before file_server
+}
+
+:80 {
+    root * /app/public
+
+    # Geospatial projects serve versioned map assets (PMTiles, glyphs, sprites)
+    # from public/tiles/<version>/: long immutable cache; Caddy's file server
+    # natively honours the HTTP range requests required by the pmtiles protocol.
+    @tiles path /tiles/*
+    header @tiles Cache-Control "public, max-age=31536000, immutable"
+
+    php_server
+}
