@@ -402,7 +402,7 @@ Each module is an independent Docker Compose file that can be freely combined wi
 | `adminer` | Adminer | Database web administration interface with auto-login and dark theme. |
 | `ollama` | Ollama | Local LLM server for AI/RAG projects. |
 | `gotenberg` | Gotenberg 8 | Stateless PDF/document conversion API (runs as a separate container, reached by the web service via `GOTENBERG_URL`). |
-| `valhalla` | Valhalla (gis-ops) | Self-hosted routing engine for geospatial projects, reached via `VALHALLA_URL`. **Opt-in only** (see below) — serves a pre-built tile-pack read-only from `var/dev/valhalla/custom_files/`. |
+| `valhalla` | Valhalla (gis-ops) | Self-hosted routing engine for geospatial projects, reached via `VALHALLA_URL`. **Opt-in only** (see below) — serves a pre-built tile-pack from `var/dev/valhalla/custom_files/`. |
 | `sandbox` | PHP CLI (Alpine) | **Standalone.** Lightweight PHP sandbox for quick experimentation. Cannot be combined with other modules. |
 
 #### Smart auto-detection
@@ -440,7 +440,7 @@ The listed modules are appended (deduplicated) to whatever auto-detection resolv
 
 Enabled via the opt-in above, the `valhalla` module starts a [gis-ops/docker-valhalla](https://github.com/gis-ops/docker-valhalla) container on the shared network and exposes `VALHALLA_URL=http://valhalla:8002` to the web service.
 
-- **Pre-built tile-pack required.** Valhalla tiles are built outside Docker and dropped into `var/dev/valhalla/custom_files/` (configurable via `VALHALLA_TILES_PATH`), mounted read-only. `var/dev/` is excluded from the image build context, so multi-gigabyte tile-packs never bloat the build.
+- **Pre-built tile-pack required.** Valhalla tiles are built outside Docker and dropped into `var/dev/valhalla/custom_files/` (configurable via `VALHALLA_TILES_PATH`). The mount is read-write because the gis-ops entrypoint writes hashes / extracts tiles there on startup. `var/dev/` is excluded from the image build context, so multi-gigabyte tile-packs never bloat the build.
 - **Graceful pre-flight.** On `up`, the presence of the tile-pack is checked via a sentinel file (`VALHALLA_TILES_SENTINEL`, default `valhalla.json`). If the tiles are missing, `mtdocker` prints the build steps and **starts every other container without Valhalla** — the app degrades cleanly (routing returns 503) instead of crash-looping a tiles-less container.
 
 #### Module combinations examples

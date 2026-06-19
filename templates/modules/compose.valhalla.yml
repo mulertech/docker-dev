@@ -10,10 +10,11 @@ services:
     container_name: ${CONTAINER_NAME_VALHALLA}
     environment:
       - serve_tiles=True
-      - use_tiles_ignore_pbf=True
     ports:
       - "${VALHALLA_PORT}:8002"
     volumes:
-      - ${VALHALLA_TILES_PATH}:/custom_files:ro
+      # Read-write: the gis-ops entrypoint writes hashes / extracts tiles into
+      # /custom_files on startup, so a :ro mount makes the container exit.
+      - ${VALHALLA_TILES_PATH}:/custom_files
     networks:
       - mtdocker-network
