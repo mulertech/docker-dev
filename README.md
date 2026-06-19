@@ -6,7 +6,7 @@
 [![Total Downloads](https://img.shields.io/packagist/dt/mulertech/docker-dev.svg?style=flat-square)](https://packagist.org/packages/mulertech/docker-dev)
 
 
-The **MulerTech Docker-dev** package provides complete Docker-based development environments for web projects with a modular, composable architecture (Apache, MySQL/PostgreSQL, Symfony, Redis, MailPit, Ollama...) and includes integrated testing capabilities.
+The **MulerTech Docker-dev** package provides complete Docker-based development environments for web projects with a modular, composable architecture (Apache, MySQL/PostgreSQL/PostGIS, Symfony, Redis, MailPit, Ollama, Valhalla...) and includes integrated testing capabilities.
 
 ## Description
 
@@ -402,6 +402,7 @@ Each module is an independent Docker Compose file that can be freely combined wi
 | `adminer` | Adminer | Database web administration interface with auto-login and dark theme. |
 | `ollama` | Ollama | Local LLM server for AI/RAG projects. |
 | `gotenberg` | Gotenberg 8 | Stateless PDF/document conversion API (runs as a separate container, reached by the web service via `GOTENBERG_URL`). |
+| `valhalla` | Valhalla (gis-ops) | Self-hosted routing engine for geospatial projects, reached via `VALHALLA_URL`. **Opt-in only** (see below) — serves a pre-built tile-pack read-only from `var/dev/valhalla/custom_files/`. |
 | `sandbox` | PHP CLI (Alpine) | **Standalone.** Lightweight PHP sandbox for quick experimentation. Cannot be combined with other modules. |
 
 #### Smart auto-detection
@@ -419,6 +420,29 @@ When running `./vendor/bin/mtdocker init` without arguments, modules are automat
 
 For Symfony projects, the packages in `composer.json` determine whether `pgvector` + `ollama` (AI/RAG), `postgis` (spatial), or standard `postgres` is activated. Independently of the database choice, the `gotenberg` module is added to the Symfony stack whenever `sensiolabs/gotenberg-bundle` is detected. To use Apache instead of FrankenPHP, pass the modules explicitly (e.g., `mtdocker init apache-php,symfony,postgres,redis,mailpit,adminer`).
 
+#### Explicit module opt-in (`extra.mtdocker.modules`)
+
+Some modules back a service that has **no detectable composer dependency** (e.g. a self-hosted engine consumed through a hand-written client). A project requests such a module explicitly in its `composer.json`, and it is merged into auto-detection — without affecting any other project:
+
+```json
+{
+    "extra": {
+        "mtdocker": {
+            "modules": ["valhalla"]
+        }
+    }
+}
+```
+
+The listed modules are appended (deduplicated) to whatever auto-detection resolves. This is the supported way to enable the `valhalla` module.
+
+#### The `valhalla` routing module
+
+Enabled via the opt-in above, the `valhalla` module starts a [gis-ops/docker-valhalla](https://github.com/gis-ops/docker-valhalla) container on the shared network and exposes `VALHALLA_URL=http://valhalla:8002` to the web service.
+
+- **Pre-built tile-pack required.** Valhalla tiles are built outside Docker and dropped into `var/dev/valhalla/custom_files/` (configurable via `VALHALLA_TILES_PATH`), mounted read-only. `var/dev/` is excluded from the image build context, so multi-gigabyte tile-packs never bloat the build.
+- **Graceful pre-flight.** On `up`, the presence of the tile-pack is checked via a sentinel file (`VALHALLA_TILES_SENTINEL`, default `valhalla.json`). If the tiles are missing, `mtdocker` prints the build steps and **starts every other container without Valhalla** — the app degrades cleanly (routing returns 503) instead of crash-looping a tiles-less container.
+
 #### Module combinations examples
 
 ```sh
@@ -430,6 +454,9 @@ For Symfony projects, the packages in `composer.json` determine whether `pgvecto
 
 # Symfony spatial stack (PostGIS)
 ./vendor/bin/mtdocker init frankenphp,symfony,postgis,redis,mailpit,adminer
+
+# Symfony spatial stack with self-hosted routing (PostGIS + Valhalla)
+./vendor/bin/mtdocker init frankenphp,symfony,postgis,valhalla,redis,mailpit,adminer
 
 # PHP + PostgreSQL + Adminer
 ./vendor/bin/mtdocker init frankenphp,postgres,adminer
@@ -516,9 +543,9 @@ Configure PHPStorm to work with your Docker development environment:
 
 ### Core Classes
 - **`Application`**: Main CLI dispatcher handling all commands
-- **`Composer`**: Project analysis (PHP version detection, database requirements, Symfony detection, AI/RAG package detection)
-- **`Docker`**: Module initialization, Docker Compose lifecycle, port generation, container naming
-- **`ModuleResolver`**: Module auto-detection logic based on `composer.json` analysis, file resolution for each module combination
+- **`Composer`**: Project analysis (PHP version detection, database requirements, Symfony detection, AI/RAG package detection, explicit module opt-in via `extra.mtdocker.modules`)
+- **`Docker`**: Module initialization, Docker Compose lifecycle, port generation, container naming, pre-flight checks (e.g. graceful skip of `valhalla` when its tile-pack is missing)
+- **`ModuleResolver`**: Module auto-detection logic based on `composer.json` analysis (merging explicit opt-in modules), file resolution for each module combination
 - **`Symfony`**: Symfony-specific configurations (Doctrine, Mailer)
 
 ### Command System
@@ -528,7 +555,7 @@ Configure PHPStorm to work with your Docker development environment:
 - **`CommandRegistry`**: Command routing and management
 
 ### Module System
-- **`templates/modules/`**: 14 independent Docker Compose files, one per module. They stay in the package and are referenced via absolute paths.
+- **`templates/modules/`**: 15 independent Docker Compose files, one per module. They stay in the package and are referenced via absolute paths.
 - **`templates/shared/`**: Build context files (Dockerfiles, configs, SQL scripts, secrets) copied into `.mtdocker/` during initialization.
 - **Docker Compose merge**: Modules are combined via `docker compose -f ... -f ...`. The base module (`apache-php` or `apache-html`) is always loaded first, then overlays are applied in order.
 
