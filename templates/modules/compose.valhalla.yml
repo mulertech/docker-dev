@@ -1,0 +1,19 @@
+services:
+  web:
+    depends_on:
+      - valhalla
+    environment:
+      - VALHALLA_URL=${VALHALLA_URL}
+
+  valhalla:
+    image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
+    container_name: ${CONTAINER_NAME_VALHALLA}
+    environment:
+      - serve_tiles=True
+      - use_tiles_ignore_pbf=True
+    ports:
+      - "${VALHALLA_PORT}:8002"
+    volumes:
+      - ${VALHALLA_TILES_PATH}:/custom_files:ro
+    networks:
+      - mtdocker-network

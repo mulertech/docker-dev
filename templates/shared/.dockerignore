@@ -11,6 +11,9 @@ var/cache/*
 var/log/*
 var/sessions/*
 
+# Dev-only data (tile-packs, import files) — never part of the image
+var/dev/
+
 # Temporary Node.js files (Tailwind/UX will be compiled in container)
 node_modules/.cache
 .npm

@@ -295,6 +295,9 @@ class Docker
         if (in_array('gotenberg', $modules, true)) {
             $lines[] = "CONTAINER_NAME_GOTENBERG=$projectBaseName-gotenberg";
         }
+        if (in_array('valhalla', $modules, true)) {
+            $lines[] = "CONTAINER_NAME_VALHALLA=$projectBaseName-valhalla";
+        }
 
         $lines[] = '';
         $lines[] = '# =================================';
@@ -335,6 +338,11 @@ class Docker
         if (in_array('ollama', $modules, true)) {
             $port = $this->generatePortFromName($projectName.'-ollama');
             $lines[] = "OLLAMA_PORT=$port";
+        }
+        if (in_array('valhalla', $modules, true)) {
+            $port = $this->generatePortFromName($projectName.'-valhalla');
+            $lines[] = "# Valhalla routing (localhost:$port)";
+            $lines[] = "VALHALLA_PORT=$port";
         }
 
         if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true) || in_array('postgis', $modules, true)) {
@@ -379,6 +387,19 @@ class Docker
             $lines[] = 'GOTENBERG_URL=http://gotenberg:3000';
         }
 
+        if (in_array('valhalla', $modules, true)) {
+            $lines[] = '';
+            $lines[] = '# =================================';
+            $lines[] = '# ROUTING (Valhalla)';
+            $lines[] = '# =================================';
+            $lines[] = 'VALHALLA_URL=http://valhalla:8002';
+            // Pre-built tile-pack, served read-only. Built outside Docker and
+            // dropped here (gitignored, excluded from the image build context).
+            $lines[] = 'VALHALLA_TILES_PATH='.$this->composer->getProjectDir().'/var/dev/valhalla/custom_files';
+            // File whose presence proves the tile-pack is ready (pre-flight check).
+            $lines[] = 'VALHALLA_TILES_SENTINEL=valhalla.json';
+        }
+
         $envContent = implode("\n", $lines)."\n";
         file_put_contents($mtdockerPath.DIRECTORY_SEPARATOR.'.env', $envContent);
     }
@@ -417,12 +438,13 @@ class Docker
         return $strings;
     }
 
-    public function dockerComposeCommand(): string
+    /** @param array<string>|null $modules Override the configured module list (e.g. drop valhalla when its tiles are missing). */
+    public function dockerComposeCommand(?array $modules = null): string
     {
         $projectDir = $this->composer->getProjectDir();
         $mtdockerPath = $projectDir.DIRECTORY_SEPARATOR.'.mtdocker';
         $modulesPath = $this->getModulesPath();
-        $modules = $this->loadModuleConfig();
+        $modules ??= $this->loadModuleConfig();
 
         $envVars = 'DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 ';
 
@@ -470,11 +492,62 @@ class Docker
         echo "\n🚀 Web server is running at: \033]8;;http://localhost:$port\033\\http://localhost:$port\033]8;;\033\\\n\n";
     }
 
+    /**
+     * Module list to start: the configured set, minus any module whose external
+     * data is not yet in place (graceful skip). Today: valhalla without its
+     * tile-pack — start everything else so the app degrades cleanly (503 on
+     * routing) instead of a crash-looping container.
+     *
+     * @return array<string>
+     */
+    public function upModules(): array
+    {
+        $modules = $this->loadModuleConfig();
+
+        if (in_array('valhalla', $modules, true) && !$this->valhallaTilesReady()) {
+            $this->warnValhallaTilesMissing();
+            $modules = array_values(array_filter($modules, static fn (string $m): bool => 'valhalla' !== $m));
+        }
+
+        return $modules;
+    }
+
+    public function valhallaTilesReady(): bool
+    {
+        $envPath = $this->composer->getProjectDir().DIRECTORY_SEPARATOR.'.mtdocker'.DIRECTORY_SEPARATOR.'.env';
+
+        if (!file_exists($envPath)) {
+            return false;
+        }
+
+        $env = (string) file_get_contents($envPath);
+
+        if (1 !== preg_match('/^VALHALLA_TILES_PATH=(.*)$/m', $env, $pathMatch)) {
+            return false;
+        }
+
+        $path = trim($pathMatch[1]);
+        $sentinel = 'valhalla.json';
+        if (1 === preg_match('/^VALHALLA_TILES_SENTINEL=(.*)$/m', $env, $sentinelMatch)) {
+            $sentinel = trim($sentinelMatch[1]);
+        }
+
+        return '' !== $path && file_exists(rtrim($path, '/').'/'.$sentinel);
+    }
+
+    private function warnValhallaTilesMissing(): void
+    {
+        echo "\n⚠️  Valhalla tiles not found — starting without the routing engine.\n";
+        echo "    Build the tile-pack (see your project's tile build docs) and place it at\n";
+        echo "    var/dev/valhalla/custom_files/ (or set VALHALLA_TILES_PATH), then re-run.\n";
+        echo "    Routing features will return 503 until the tiles are present.\n\n";
+    }
+
     public function dockerComposeUp(string $arg2): void
     {
         $this->ensureEnvironment();
 
-        $command = $this->dockerComposeCommand().' up';
+        $command = $this->dockerComposeCommand($this->upModules()).' up';
         $command .= '-d' === $arg2 ? ' -d' : '';
 
         if ('-d' === $arg2) {

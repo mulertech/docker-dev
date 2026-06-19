@@ -96,4 +96,28 @@ class Composer
     {
         return file_exists($this->getProjectDir().DIRECTORY_SEPARATOR.$relativePath);
     }
+
+    /**
+     * Modules the project opts into explicitly via composer.json
+     * `extra.mtdocker.modules` (e.g. ["valhalla"]). Lets a project request a
+     * bespoke service that has no detectable composer dependency, without
+     * polluting auto-detection for unrelated projects.
+     *
+     * @return array<string>
+     */
+    public function extraModules(): array
+    {
+        $composer = (string) file_get_contents($this->getProjectDir().'/composer.json');
+        $data = json_decode($composer, true);
+
+        $extra = is_array($data) ? ($data['extra'] ?? null) : null;
+        $mtdocker = is_array($extra) ? ($extra['mtdocker'] ?? null) : null;
+        $modules = is_array($mtdocker) ? ($mtdocker['modules'] ?? null) : null;
+
+        if (!is_array($modules)) {
+            return [];
+        }
+
+        return array_values(array_filter($modules, 'is_string'));
+    }
 }

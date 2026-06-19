@@ -49,6 +49,15 @@ class ModuleResolver
             $modules[] = 'apache-html';
         }
 
+        // Merge explicit opt-in modules (composer.json extra.mtdocker.modules),
+        // deduplicated and order-preserving. Lets a project pull in a bespoke
+        // service (e.g. valhalla) that has no detectable composer dependency.
+        foreach ($this->composer->extraModules() as $extra) {
+            if (!in_array($extra, $modules, true)) {
+                $modules[] = $extra;
+            }
+        }
+
         return $modules;
     }
 
@@ -206,6 +215,7 @@ class ModuleResolver
             'adminer',
             'ollama',
             'gotenberg',
+            'valhalla',
             'sandbox',
         ];
     }
