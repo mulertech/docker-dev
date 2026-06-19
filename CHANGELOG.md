@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/SemVer).
 
+## v3.6.0 - 2026-06-19
+
+New `valhalla` routing module + explicit module opt-in
+
+- Added the `valhalla` module (`ghcr.io/gis-ops/docker-valhalla`), a self-hosted routing engine wired on `mtdocker-network`. It serves a pre-built tile-pack read-only from `var/dev/valhalla/custom_files/` (`VALHALLA_TILES_PATH`) and exposes `VALHALLA_URL=http://valhalla:8002` to the web container, with `CONTAINER_NAME_VALHALLA` and a generated `VALHALLA_PORT`.
+- Explicit module opt-in: projects can request a bespoke module that has no detectable composer dependency via `composer.json` `extra.mtdocker.modules` (e.g. `["valhalla"]`). Merged into auto-detection without affecting other projects.
+- Graceful pre-flight: `mtdocker up` checks the tile-pack sentinel (`VALHALLA_TILES_SENTINEL`, default `valhalla.json`); if missing, it warns with the build steps and starts every other container without Valhalla (the app degrades to 503 on routing) instead of looping a tiles-less container.
+- The shared `.dockerignore` now excludes `var/dev/` so dev-only data (tile-packs, import files, often gigabytes) never enters the image build context.
+
 ## v3.5.0 - 2026-06-10
 
 Caddyfile variant for geospatial (postgis) Symfony projects
