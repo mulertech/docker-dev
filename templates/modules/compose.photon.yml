@@ -1,0 +1,22 @@
+services:
+  web:
+    depends_on:
+      - photon
+    environment:
+      - PHOTON_URL=${PHOTON_URL}
+
+  photon:
+    image: rtuszik/photon-docker:latest
+    container_name: ${CONTAINER_NAME_PHOTON}
+    environment:
+      # Serve the pre-built index only: never download or update at runtime
+      # (the index is dropped in by the user, like the Valhalla tile-pack).
+      - UPDATE_STRATEGY=DISABLED
+    ports:
+      - "${PHOTON_PORT}:2322"
+    volumes:
+      # Read-write: the embedded OpenSearch engine writes lock/state files into
+      # the index directory on startup, so a :ro mount makes the container exit.
+      - ${PHOTON_DATA_PATH}:/photon/data
+    networks:
+      - mtdocker-network

@@ -298,6 +298,9 @@ class Docker
         if (in_array('valhalla', $modules, true)) {
             $lines[] = "CONTAINER_NAME_VALHALLA=$projectBaseName-valhalla";
         }
+        if (in_array('photon', $modules, true)) {
+            $lines[] = "CONTAINER_NAME_PHOTON=$projectBaseName-photon";
+        }
 
         $lines[] = '';
         $lines[] = '# =================================';
@@ -343,6 +346,11 @@ class Docker
             $port = $this->generatePortFromName($projectName.'-valhalla');
             $lines[] = "# Valhalla routing (localhost:$port)";
             $lines[] = "VALHALLA_PORT=$port";
+        }
+        if (in_array('photon', $modules, true)) {
+            $port = $this->generatePortFromName($projectName.'-photon');
+            $lines[] = "# Photon geocoding (localhost:$port)";
+            $lines[] = "PHOTON_PORT=$port";
         }
 
         if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true) || in_array('postgis', $modules, true)) {
@@ -398,6 +406,20 @@ class Docker
             $lines[] = 'VALHALLA_TILES_PATH='.$this->composer->getProjectDir().'/var/dev/valhalla/custom_files';
             // File whose presence proves the tile-pack is ready (pre-flight check).
             $lines[] = 'VALHALLA_TILES_SENTINEL=valhalla.json';
+        }
+
+        if (in_array('photon', $modules, true)) {
+            $lines[] = '';
+            $lines[] = '# =================================';
+            $lines[] = '# GEOCODING (Photon)';
+            $lines[] = '# =================================';
+            $lines[] = 'PHOTON_URL=http://photon:2322';
+            // Pre-built search index, served read-only. Built/downloaded outside
+            // Docker and dropped here (gitignored, excluded from the build context).
+            $lines[] = 'PHOTON_DATA_PATH='.$this->composer->getProjectDir().'/var/dev/photon/data';
+            // Directory whose presence proves the index is ready (pre-flight check):
+            // the prebuilt dump (.tar.bz2) extracts to a photon_data/ subdirectory.
+            $lines[] = 'PHOTON_DATA_SENTINEL=photon_data';
         }
 
         $envContent = implode("\n", $lines)."\n";
@@ -494,9 +516,10 @@ class Docker
 
     /**
      * Module list to start: the configured set, minus any module whose external
-     * data is not yet in place (graceful skip). Today: valhalla without its
-     * tile-pack — start everything else so the app degrades cleanly (503 on
-     * routing) instead of a crash-looping container.
+     * data is not yet in place (graceful skip): valhalla without its tile-pack
+     * or photon without its search index — start everything else so the app
+     * degrades cleanly (routing/geocoding fall back) instead of a crash-looping
+     * container.
      *
      * @return array<string>
      */
@@ -507,6 +530,11 @@ class Docker
         if (in_array('valhalla', $modules, true) && !$this->valhallaTilesReady()) {
             $this->warnValhallaTilesMissing();
             $modules = array_values(array_filter($modules, static fn (string $m): bool => 'valhalla' !== $m));
+        }
+
+        if (in_array('photon', $modules, true) && !$this->photonDataReady()) {
+            $this->warnPhotonDataMissing();
+            $modules = array_values(array_filter($modules, static fn (string $m): bool => 'photon' !== $m));
         }
 
         return $modules;
@@ -541,6 +569,37 @@ class Docker
         echo "    Build the tile-pack (see your project's tile build docs) and place it at\n";
         echo "    var/dev/valhalla/custom_files/ (or set VALHALLA_TILES_PATH), then re-run.\n";
         echo "    Routing features will return 503 until the tiles are present.\n\n";
+    }
+
+    public function photonDataReady(): bool
+    {
+        $envPath = $this->composer->getProjectDir().DIRECTORY_SEPARATOR.'.mtdocker'.DIRECTORY_SEPARATOR.'.env';
+
+        if (!file_exists($envPath)) {
+            return false;
+        }
+
+        $env = (string) file_get_contents($envPath);
+
+        if (1 !== preg_match('/^PHOTON_DATA_PATH=(.*)$/m', $env, $pathMatch)) {
+            return false;
+        }
+
+        $path = trim($pathMatch[1]);
+        $sentinel = 'photon_data';
+        if (1 === preg_match('/^PHOTON_DATA_SENTINEL=(.*)$/m', $env, $sentinelMatch)) {
+            $sentinel = trim($sentinelMatch[1]);
+        }
+
+        return '' !== $path && file_exists(rtrim($path, '/').'/'.$sentinel);
+    }
+
+    private function warnPhotonDataMissing(): void
+    {
+        echo "\n⚠️  Photon index not found — starting without the geocoder.\n";
+        echo "    Build/download the search index (see your project's geocoding docs) and place\n";
+        echo "    it at var/dev/photon/data/ (or set PHOTON_DATA_PATH), then re-run.\n";
+        echo "    Geocoding features will fall back until the index is present.\n\n";
     }
 
     public function dockerComposeUp(string $arg2): void

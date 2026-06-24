@@ -216,6 +216,7 @@ class ModuleResolver
             'ollama',
             'gotenberg',
             'valhalla',
+            'photon',
             'sandbox',
         ];
     }

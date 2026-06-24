@@ -6,7 +6,7 @@
 [![Total Downloads](https://img.shields.io/packagist/dt/mulertech/docker-dev.svg?style=flat-square)](https://packagist.org/packages/mulertech/docker-dev)
 
 
-The **MulerTech Docker-dev** package provides complete Docker-based development environments for web projects with a modular, composable architecture (Apache, MySQL/PostgreSQL/PostGIS, Symfony, Redis, MailPit, Ollama, Valhalla...) and includes integrated testing capabilities.
+The **MulerTech Docker-dev** package provides complete Docker-based development environments for web projects with a modular, composable architecture (Apache, MySQL/PostgreSQL/PostGIS, Symfony, Redis, MailPit, Ollama, Valhalla, Photon...) and includes integrated testing capabilities.
 
 ## Description
 
@@ -403,6 +403,7 @@ Each module is an independent Docker Compose file that can be freely combined wi
 | `ollama` | Ollama | Local LLM server for AI/RAG projects. |
 | `gotenberg` | Gotenberg 8 | Stateless PDF/document conversion API (runs as a separate container, reached by the web service via `GOTENBERG_URL`). |
 | `valhalla` | Valhalla (gis-ops) | Self-hosted routing engine for geospatial projects, reached via `VALHALLA_URL`. **Opt-in only** (see below) — serves a pre-built tile-pack from `var/dev/valhalla/custom_files/`. |
+| `photon` | Photon (komoot) | Self-hosted geocoder for geospatial projects, reached via `PHOTON_URL`. **Opt-in only** (see below) — serves a pre-built search index from `var/dev/photon/data/`. |
 | `sandbox` | PHP CLI (Alpine) | **Standalone.** Lightweight PHP sandbox for quick experimentation. Cannot be combined with other modules. |
 
 #### Smart auto-detection
@@ -428,13 +429,13 @@ Some modules back a service that has **no detectable composer dependency** (e.g.
 {
     "extra": {
         "mtdocker": {
-            "modules": ["valhalla"]
+            "modules": ["valhalla", "photon"]
         }
     }
 }
 ```
 
-The listed modules are appended (deduplicated) to whatever auto-detection resolves. This is the supported way to enable the `valhalla` module.
+The listed modules are appended (deduplicated) to whatever auto-detection resolves. This is the supported way to enable the `valhalla` and `photon` modules.
 
 #### The `valhalla` routing module
 
@@ -442,6 +443,13 @@ Enabled via the opt-in above, the `valhalla` module starts a [gis-ops/docker-val
 
 - **Pre-built tile-pack required.** Valhalla tiles are built outside Docker and dropped into `var/dev/valhalla/custom_files/` (configurable via `VALHALLA_TILES_PATH`). The mount is read-write because the gis-ops entrypoint writes hashes / extracts tiles there on startup. `var/dev/` is excluded from the image build context, so multi-gigabyte tile-packs never bloat the build.
 - **Graceful pre-flight.** On `up`, the presence of the tile-pack is checked via a sentinel file (`VALHALLA_TILES_SENTINEL`, default `valhalla.json`). If the tiles are missing, `mtdocker` prints the build steps and **starts every other container without Valhalla** — the app degrades cleanly (routing returns 503) instead of crash-looping a tiles-less container.
+
+#### The `photon` geocoding module
+
+Enabled via the same opt-in, the `photon` module starts a [rtuszik/photon-docker](https://github.com/rtuszik/photon-docker) container ([Photon](https://github.com/komoot/photon) by komoot) on the shared network and exposes `PHOTON_URL=http://photon:2322` to the web service. It follows the exact same pattern as `valhalla`:
+
+- **Pre-built search index required.** The Photon index is built/downloaded outside Docker and dropped into `var/dev/photon/data/` (configurable via `PHOTON_DATA_PATH`). The prebuilt dump (`.tar.bz2`) extracts to a `photon_data/` subdirectory. The mount is read-write because the embedded search engine writes lock/state files on startup. `var/dev/` is excluded from the image build context, so the multi-gigabyte index never bloats the build. Runtime updates are disabled (`UPDATE_STRATEGY=DISABLED`) — the container only serves what you drop in.
+- **Graceful pre-flight.** On `up`, the presence of the index is checked via a sentinel (`PHOTON_DATA_SENTINEL`, default `photon_data`). If it is missing, `mtdocker` prints the steps and **starts every other container without Photon** — geocoding falls back instead of crash-looping an index-less container.
 
 #### Module combinations examples
 
@@ -457,6 +465,9 @@ Enabled via the opt-in above, the `valhalla` module starts a [gis-ops/docker-val
 
 # Symfony spatial stack with self-hosted routing (PostGIS + Valhalla)
 ./vendor/bin/mtdocker init frankenphp,symfony,postgis,valhalla,redis,mailpit,adminer
+
+# Symfony spatial stack with self-hosted routing + geocoding (PostGIS + Valhalla + Photon)
+./vendor/bin/mtdocker init frankenphp,symfony,postgis,valhalla,photon,redis,mailpit,adminer
 
 # PHP + PostgreSQL + Adminer
 ./vendor/bin/mtdocker init frankenphp,postgres,adminer
@@ -544,7 +555,7 @@ Configure PHPStorm to work with your Docker development environment:
 ### Core Classes
 - **`Application`**: Main CLI dispatcher handling all commands
 - **`Composer`**: Project analysis (PHP version detection, database requirements, Symfony detection, AI/RAG package detection, explicit module opt-in via `extra.mtdocker.modules`)
-- **`Docker`**: Module initialization, Docker Compose lifecycle, port generation, container naming, pre-flight checks (e.g. graceful skip of `valhalla` when its tile-pack is missing)
+- **`Docker`**: Module initialization, Docker Compose lifecycle, port generation, container naming, pre-flight checks (e.g. graceful skip of `valhalla` when its tile-pack is missing, or `photon` when its search index is missing)
 - **`ModuleResolver`**: Module auto-detection logic based on `composer.json` analysis (merging explicit opt-in modules), file resolution for each module combination
 - **`Symfony`**: Symfony-specific configurations (Doctrine, Mailer)
 
