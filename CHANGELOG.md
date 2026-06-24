@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/SemVer).
 
+## v3.7.0 - 2026-06-24
+
+New `photon` geocoding module
+
+- Added the `photon` module (`rtuszik/photon-docker`, [Photon](https://github.com/komoot/photon) by komoot), a self-hosted geocoder wired on `mtdocker-network`. It serves a pre-built search index from `var/dev/photon/data/` (`PHOTON_DATA_PATH`) and exposes `PHOTON_URL=http://photon:2322` to the web container, with `CONTAINER_NAME_PHOTON` and a generated `PHOTON_PORT`. Like `valhalla`, it is **opt-in only** via `composer.json` `extra.mtdocker.modules` (e.g. `["valhalla", "photon"]`) — there is no detectable composer dependency for a self-hosted geocoder reached through a hand-written client.
+- The mount is read-write because the embedded search engine writes lock/state files on startup; runtime index updates are disabled (`UPDATE_STRATEGY=DISABLED`) so the container only serves the index dropped in. `var/dev/` remains excluded from the image build context, so the multi-gigabyte index never bloats the build.
+- Graceful pre-flight: `mtdocker up` checks the index sentinel (`PHOTON_DATA_SENTINEL`, default `photon_data` — the subdirectory the prebuilt `.tar.bz2` extracts to); if missing, it warns with the steps and starts every other container without Photon (geocoding falls back) instead of looping an index-less container.
+
 ## v3.6.1 - 2026-06-19
 
 Patch fix for the valhalla module introduced in v3.6.0.
