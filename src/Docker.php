@@ -354,7 +354,7 @@ class Docker
         }
 
         if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true) || in_array('postgis', $modules, true)) {
-            $serverVersion = in_array('pgvector', $modules, true) ? '17.0' : '16.0';
+            $serverVersion = in_array('pgvector', $modules, true) ? '17' : '16';
             $lines[] = '';
             $lines[] = '# =================================';
             $lines[] = '# DATABASE CONFIGURATION';
@@ -362,7 +362,9 @@ class Docker
             $lines[] = 'DB_NAME=db';
             $lines[] = 'DB_USER=user';
             $lines[] = 'DB_PASSWORD=password';
-            $lines[] = '# Doctrine server_version (consumed in config/packages/doctrine.yaml)';
+            $lines[] = '# Major version: drives the postgres image tag, the data mount point';
+            $lines[] = '# and Doctrine server_version (consumed in config/packages/doctrine.yaml).';
+            $lines[] = '# Changing it requires removing the postgres-data volume.';
             $lines[] = "DATABASE_SERVER_VERSION=$serverVersion";
         }
 
@@ -470,6 +472,14 @@ class Docker
 
         $envVars = 'DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 ';
 
+        if (in_array('postgres', $modules, true)) {
+            $major = $this->postgresMajorVersion($mtdockerPath);
+            // PostgreSQL 18+ stores data in a major-version subdirectory and refuses
+            // to start on the legacy mount point used by earlier images.
+            $dataPath = $major >= 18 ? '/var/lib/postgresql' : '/var/lib/postgresql/data';
+            $envVars .= 'POSTGRES_IMAGE_TAG='.$major.' POSTGRES_DATA_PATH='.$dataPath.' ';
+        }
+
         $composeFiles = '';
         $baseFirst = ['frankenphp', 'apache-php', 'apache-html', 'sandbox'];
         $orderedModules = [];
@@ -491,6 +501,28 @@ class Docker
         }
 
         return $envVars.'docker compose --env-file '.$mtdockerPath.DIRECTORY_SEPARATOR.'.env'.$composeFiles.' --project-name '.$this->getProjectName();
+    }
+
+    /**
+     * Major version of the PostgreSQL image, read from the single DATABASE_SERVER_VERSION key.
+     * Accepts "16", "16.0" or "16.4" and keeps only the major, so the image stays on the
+     * latest patch of that branch.
+     */
+    private function postgresMajorVersion(string $mtdockerPath): int
+    {
+        $envPath = $mtdockerPath.DIRECTORY_SEPARATOR.'.env';
+
+        if (!is_file($envPath)) {
+            return 16;
+        }
+
+        $env = (string) file_get_contents($envPath);
+
+        if (1 !== preg_match('/^DATABASE_SERVER_VERSION=(\d+)/m', $env, $matches)) {
+            return 16;
+        }
+
+        return (int) $matches[1];
     }
 
     public function getWebPort(): int
