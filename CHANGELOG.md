@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/SemVer).
 
+## v3.8.0 - 2026-07-20
+
+- Changed: the PostgreSQL major version is now driven by the existing `DATABASE_SERVER_VERSION` key alone. It was previously hardcoded to `16` in the compose template, with no way to override it from a project since module compose files are read straight from `vendor/`. Projects targeting another major (18 in production, for instance) now only change that one value.
+- Added: `POSTGRES_IMAGE_TAG` and `POSTGRES_DATA_PATH`, both **computed by mtdocker** from `DATABASE_SERVER_VERSION` and injected into the `docker compose` call. They are not written to `.mtdocker/.env` and are not meant to be set by hand.
+  - Only the major is kept for the image tag, so `16`, `16.0` and `16.4` all resolve to `postgres:16` and stay on the latest patch of that branch. Existing projects generated with `DATABASE_SERVER_VERSION=16.0` are therefore unaffected.
+  - PostgreSQL 18+ images store data in a major-version subdirectory and **refuse to start** on the legacy mount point, so the mount is switched to `/var/lib/postgresql` from 18 onwards.
+  
+- Changed: generated `.env` now writes the major only (`DATABASE_SERVER_VERSION=16` instead of `16.0`). Doctrine accepts a bare major, and DBAL 4 resolves every version from 12 upwards to the same platform.
+- Note: changing the major version requires removing the existing `postgres-data` volume, as the data directory is not compatible across majors.
+- Known limitation, unchanged: `mtdocker down -v` does not forward `-v` to `docker compose`, so the volume must be removed with `docker volume rm <project>_postgres-data`.
+- Unchanged: the `pgvector` and `postgis` modules keep their pinned images, which are not plain `postgres` tags.
+
 ## v3.7.0 - 2026-06-24
 
 New `photon` geocoding module
