@@ -6,15 +6,21 @@ services:
       - VALHALLA_URL=${VALHALLA_URL}
 
   valhalla:
-    image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
+    # Official image. The tag must match the toolchain that built the tile-pack:
+    # Valhalla only compares the MAJOR digit at tile load and just logs a warning,
+    # so a pack built by another minor is read silently with a possibly different
+    # layout. Rebuild the pack when bumping this tag.
+    image: ghcr.io/valhalla/valhalla:${VALHALLA_IMAGE_TAG:-3.8.2}
     container_name: ${CONTAINER_NAME_VALHALLA}
-    environment:
-      - serve_tiles=True
+    # The official image declares no ENTRYPOINT (its CMD is /bin/bash), so the serve
+    # command is explicit. It only serves a pre-built pack — it never builds tiles.
+    command: ["valhalla_service", "/custom_files/valhalla.json", "1"]
     ports:
       - "${VALHALLA_PORT}:8002"
     volumes:
-      # Read-write: the gis-ops entrypoint writes hashes / extracts tiles into
-      # /custom_files on startup, so a :ro mount makes the container exit.
+      # Must contain valhalla.json (holding CONTAINER paths, i.e.
+      # /custom_files/valhalla_tiles.tar) and valhalla_tiles.tar. Nothing is written
+      # here by the official image, unlike the former gis-ops entrypoint.
       - ${VALHALLA_TILES_PATH}:/custom_files
     networks:
       - mtdocker-network
