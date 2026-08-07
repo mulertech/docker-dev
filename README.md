@@ -275,7 +275,10 @@ Runs PHP CS Fixer silently (applies fixes, JSON report, no ANSI, no progress bar
 
 #### all-ai
 
-Runs `cs-fixer-ai`, `test-ai` and `phpstan-ai` in sequence:
+Runs `cs-fixer-ai`, `test-ai` and `phpstan-ai` in sequence, then two extra checks:
+
+- `composer audit --format=summary` — security advisories, condensed to a severity summary (run `mtdocker composer audit` for the detailed report)
+- `php bin/console doctrine:schema:validate --env=test` — only when the project is a Symfony project using Doctrine ORM
 
 ```sh
 ./vendor/bin/mtdocker all-ai

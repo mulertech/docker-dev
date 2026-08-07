@@ -11,13 +11,14 @@ use MulerTech\DockerDev\Command\SandboxCommand;
 class Application
 {
     private Docker $docker;
+    private Composer $composer;
     private CommandRegistry $commandRegistry;
 
     public function __construct()
     {
-        $composer = new Composer();
-        $this->docker = new Docker($composer);
-        $this->commandRegistry = new CommandRegistry($this->docker, $composer);
+        $this->composer = new Composer();
+        $this->docker = new Docker($this->composer);
+        $this->commandRegistry = new CommandRegistry($this->docker, $this->composer);
     }
 
     /** @param array<string> $args */
@@ -175,6 +176,32 @@ class Application
         $this->handleCsFixerAi([]);
         $this->handleTestAi([]);
         $this->handlePhpstanAi([]);
+        $this->handleSchemaValidateAi();
+        $this->handleAuditAi();
+    }
+
+    private function handleAuditAi(): void
+    {
+        $this->enableQuietMode();
+        $this->commandRegistry->executeCommand('composer', [
+            'audit', '--format=summary', '--no-interaction', '--no-ansi',
+        ]);
+    }
+
+    private function handleSchemaValidateAi(): void
+    {
+        if (!$this->composer->isSymfonyProject()) {
+            return;
+        }
+
+        if (!$this->composer->hasPackage('doctrine/orm') && !$this->composer->hasPackage('doctrine/doctrine-bundle')) {
+            return;
+        }
+
+        $this->enableQuietMode();
+        $this->commandRegistry->executeCommand('symfony', [
+            'doctrine:schema:validate', '--env=test', '--no-interaction', '--no-ansi',
+        ]);
     }
 
     private function handleAll(): void
