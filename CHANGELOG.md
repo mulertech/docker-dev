@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/SemVer).
 
+## v3.10.0 - 2026-08-07
+
+- Added: `all-ai` now runs `composer audit --format=summary` after the existing checks. The `summary` format reports only the advisory counts per severity instead of the full table — `mtdocker composer audit` still gives the detailed report.
+- Added: `all-ai` also runs `doctrine:schema:validate --env=test` when the project is a Symfony project depending on `doctrine/orm` or `doctrine/doctrine-bundle`. The `test` environment is used because it is the one `runFirstTimeSetup()` migrates, so it is the environment whose database is guaranteed to be in sync with the migrations.
+
 ## v3.9.0 - 2026-07-23
 
 - Changed: the `valhalla` module now runs the **official** `ghcr.io/valhalla/valhalla` image instead of `ghcr.io/gis-ops/docker-valhalla/valhalla`. The gis-ops repository has been frozen since October 2024 and never published anything past **3.5.1**, while upstream Valhalla is at 3.8.2 — pinning the runtime to the toolchain that builds the tiles was therefore impossible.
