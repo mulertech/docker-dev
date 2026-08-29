@@ -24,11 +24,13 @@ class PhpStanCommand extends BaseCommand
     }
 
     /** @param array<string> $customArgs */
-    protected function runCommand(array $customArgs = []): void
+    protected function runCommand(array $customArgs = []): int
     {
         $containerName = $this->docker->getContainerName();
         $ttyFlag = (posix_isatty(STDIN)) ? '-it ' : '-i ';
         $cmd = 'docker exec '.$ttyFlag.$containerName.' ./vendor/bin/phpstan '.$this->buildCommand($this->getDefaultArgs(), $customArgs);
-        passthru($cmd);
+        passthru($cmd, $exitCode);
+
+        return $exitCode;
     }
 }

@@ -14,7 +14,7 @@ abstract class BaseCommand implements CommandInterface
     }
 
     /** @param array<string> $customArgs */
-    public function execute(array $customArgs = []): void
+    public function execute(array $customArgs = []): int
     {
         $dockerUp = $this->docker->isDockerUp();
 
@@ -24,15 +24,17 @@ abstract class BaseCommand implements CommandInterface
 
         $this->docker->runFirstTimeSetup();
 
-        $this->runCommand($customArgs);
+        $exitCode = $this->runCommand($customArgs);
 
         if (!$dockerUp && $this->requiresDocker()) {
             $this->docker->dockerComposeDown();
         }
+
+        return $exitCode;
     }
 
     /** @param array<string> $customArgs */
-    abstract protected function runCommand(array $customArgs = []): void;
+    abstract protected function runCommand(array $customArgs = []): int;
 
     /**
      * @param array<string> $defaultArgs

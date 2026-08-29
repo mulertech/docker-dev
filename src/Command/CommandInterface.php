@@ -12,8 +12,13 @@ interface CommandInterface
     /** @return array<string> */
     public function getDefaultArgs(): array;
 
-    /** @param array<string> $customArgs */
-    public function execute(array $customArgs = []): void;
+    /**
+     * @param array<string> $customArgs
+     *
+     * @return int the exit code of the underlying process, so a caller chaining several
+     *             commands can tell a failure from a success
+     */
+    public function execute(array $customArgs = []): int;
 
     public function requiresDocker(): bool;
 }

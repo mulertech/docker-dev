@@ -35,23 +35,25 @@ class SymfonyCommand extends BaseCommand
     }
 
     /** @param array<string> $customArgs */
-    public function execute(array $customArgs = []): void
+    public function execute(array $customArgs = []): int
     {
         if (!$this->composer->isSymfonyProject()) {
             echo "Error: This command is only available for Symfony projects.\n";
 
-            return;
+            return 1;
         }
 
-        parent::execute($customArgs);
+        return parent::execute($customArgs);
     }
 
     /** @param array<string> $customArgs */
-    protected function runCommand(array $customArgs = []): void
+    protected function runCommand(array $customArgs = []): int
     {
         $containerName = $this->docker->getContainerName();
         $ttyFlag = (posix_isatty(STDIN)) ? '-it ' : '-i ';
         $cmd = 'docker exec '.$ttyFlag.$containerName.' php bin/console '.$this->buildCommand($this->getDefaultArgs(), $customArgs);
-        passthru($cmd);
+        passthru($cmd, $exitCode);
+
+        return $exitCode;
     }
 }

@@ -13,7 +13,7 @@ class SandboxCommand
         $this->docker = $docker;
     }
 
-    public function execute(): void
+    public function execute(): int
     {
         $this->docker->ensureSandboxEnvironment();
 
@@ -31,5 +31,7 @@ class SandboxCommand
         if (!$wasUp) {
             $this->docker->sandboxDown();
         }
+
+        return $exitCode;
     }
 }

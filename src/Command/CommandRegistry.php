@@ -33,21 +33,30 @@ class CommandRegistry
     }
 
     /** @param array<string> $args */
-    public function executeCommand(string $name, array $args = []): void
+    public function executeCommand(string $name, array $args = []): int
     {
         if (!$this->hasCommand($name)) {
             echo "Unknown command: $name\n";
 
-            return;
+            return 1;
         }
 
-        $this->commands[$name]->execute($args);
+        return $this->commands[$name]->execute($args);
     }
 
-    public function executeAll(): void
+    /**
+     * Toutes les étapes tournent, même après un échec : on veut la liste complète des
+     * problèmes, pas le premier. Le code renvoyé est celui de la première qui a échoué.
+     */
+    public function executeAll(): int
     {
-        $this->commands['cs-fixer']->execute();
-        $this->commands['test']->execute();
-        $this->commands['phpstan']->execute();
+        $exitCode = 0;
+
+        foreach (['cs-fixer', 'test', 'phpstan'] as $name) {
+            $code = $this->commands[$name]->execute();
+            $exitCode = 0 !== $exitCode ? $exitCode : $code;
+        }
+
+        return $exitCode;
     }
 }

@@ -22,24 +22,20 @@ class Application
     }
 
     /** @param array<string> $args */
-    public function run(array $args): void
+    public function run(array $args): int
     {
         $arg1 = $args[1] ?? '';
         $arg2 = $args[2] ?? '';
 
         switch ($arg1) {
             case 'test-coverage':
-                $this->handleTestCoverage();
-                break;
+                return $this->handleTestCoverage();
             case 'test-coverage-ai':
-                $this->handleTestCoverageAi();
-                break;
+                return $this->handleTestCoverageAi();
             case 'test-ai':
-                $this->handleTestAi($args);
-                break;
+                return $this->handleTestAi($args);
             case 'test':
-                $this->handleTest($args);
-                break;
+                return $this->handleTest($args);
             case 'up':
                 $this->handleUp($arg2);
                 break;
@@ -47,23 +43,17 @@ class Application
                 $this->handleDown();
                 break;
             case 'phpstan-ai':
-                $this->handlePhpstanAi($args);
-                break;
+                return $this->handlePhpstanAi($args);
             case 'phpstan':
-                $this->handlePhpstan($args);
-                break;
+                return $this->handlePhpstan($args);
             case 'cs-fixer-ai':
-                $this->handleCsFixerAi($args);
-                break;
+                return $this->handleCsFixerAi($args);
             case 'cs-fixer':
-                $this->handleCsFixer($args);
-                break;
+                return $this->handleCsFixer($args);
             case 'all-ai':
-                $this->handleAllAi();
-                break;
+                return $this->handleAllAi();
             case 'all':
-                $this->handleAll();
-                break;
+                return $this->handleAll();
             case 'ps-ai':
                 $this->handlePsAi();
                 break;
@@ -80,23 +70,22 @@ class Application
                 $this->handleModules();
                 break;
             case 'symfony':
-                $this->handleSymfony($args);
-                break;
+                return $this->handleSymfony($args);
             case 'composer':
-                $this->handleComposer($args);
-                break;
+                return $this->handleComposer($args);
             case 'link':
                 $this->handleLink();
                 break;
             case 'sandbox':
-                $this->handleSandbox();
-                break;
+                return $this->handleSandbox();
         }
+
+        return 0;
     }
 
-    private function handleTestCoverage(): void
+    private function handleTestCoverage(): int
     {
-        $this->commandRegistry->executeCommand('test', ['--coverage-html', './.phpunit.cache/coverage']);
+        return $this->commandRegistry->executeCommand('test', ['--coverage-html', './.phpunit.cache/coverage']);
     }
 
     private function enableQuietMode(): void
@@ -104,28 +93,31 @@ class Application
         $this->docker->setQuiet(true);
     }
 
-    private function handleTestCoverageAi(): void
+    private function handleTestCoverageAi(): int
     {
         $this->enableQuietMode();
-        $this->commandRegistry->executeCommand('test', [
+
+        return $this->commandRegistry->executeCommand('test', [
             '--coverage-text', '--colors=never', '--no-progress',
         ]);
     }
 
     /** @param array<string> $args */
-    private function handleTestAi(array $args): void
+    private function handleTestAi(array $args): int
     {
         $this->enableQuietMode();
         $consoleArgs = array_slice($args, 2);
         $aiArgs = ['--no-progress', '--colors=never'];
-        $this->commandRegistry->executeCommand('test', array_merge($aiArgs, $consoleArgs));
+
+        return $this->commandRegistry->executeCommand('test', array_merge($aiArgs, $consoleArgs));
     }
 
     /** @param array<string> $args */
-    private function handleTest(array $args): void
+    private function handleTest(array $args): int
     {
         $consoleArgs = array_slice($args, 2);
-        $this->commandRegistry->executeCommand('test', $consoleArgs);
+
+        return $this->commandRegistry->executeCommand('test', $consoleArgs);
     }
 
     private function handleUp(string $arg2): void
@@ -139,74 +131,94 @@ class Application
     }
 
     /** @param array<string> $args */
-    private function handlePhpstanAi(array $args): void
+    private function handlePhpstanAi(array $args): int
     {
         $this->enableQuietMode();
         $consoleArgs = array_slice($args, 2);
         $aiArgs = ['analyse', '--memory-limit=1G', '--no-progress', '--error-format=json'];
-        $this->commandRegistry->executeCommand('phpstan', array_merge($aiArgs, $consoleArgs));
+
+        return $this->commandRegistry->executeCommand('phpstan', array_merge($aiArgs, $consoleArgs));
     }
 
     /** @param array<string> $args */
-    private function handlePhpstan(array $args): void
+    private function handlePhpstan(array $args): int
     {
         $consoleArgs = array_slice($args, 2);
-        $this->commandRegistry->executeCommand('phpstan', $consoleArgs);
+
+        return $this->commandRegistry->executeCommand('phpstan', $consoleArgs);
     }
 
     /** @param array<string> $args */
-    private function handleCsFixerAi(array $args): void
+    private function handleCsFixerAi(array $args): int
     {
         $this->enableQuietMode();
         $consoleArgs = array_slice($args, 2);
         $aiArgs = ['fix', 'src', '--format=json', '--no-ansi', '--show-progress=none'];
-        $this->commandRegistry->executeCommand('cs-fixer', array_merge($aiArgs, $consoleArgs));
+
+        return $this->commandRegistry->executeCommand('cs-fixer', array_merge($aiArgs, $consoleArgs));
     }
 
     /** @param array<string> $args */
-    private function handleCsFixer(array $args): void
+    private function handleCsFixer(array $args): int
     {
         $consoleArgs = array_slice($args, 2);
-        $this->commandRegistry->executeCommand('cs-fixer', $consoleArgs);
+
+        return $this->commandRegistry->executeCommand('cs-fixer', $consoleArgs);
     }
 
-    private function handleAllAi(): void
+    /**
+     * Toutes les étapes tournent, même après un échec : on veut la liste complète des
+     * problèmes en une passe. Le code renvoyé est celui de la première qui a échoué, sans
+     * quoi une suite de tests rouge passerait pour un succès auprès de tout appelant —
+     * chaîne d'intégration comme lecteur pressé.
+     */
+    private function handleAllAi(): int
     {
         $this->enableQuietMode();
-        $this->handleCsFixerAi([]);
-        $this->handleTestAi([]);
-        $this->handlePhpstanAi([]);
-        $this->handleSchemaValidateAi();
-        $this->handleAuditAi();
+
+        $exitCode = 0;
+        foreach ([
+            $this->handleCsFixerAi([]),
+            $this->handleTestAi([]),
+            $this->handlePhpstanAi([]),
+            $this->handleSchemaValidateAi(),
+            $this->handleAuditAi(),
+        ] as $code) {
+            $exitCode = 0 !== $exitCode ? $exitCode : $code;
+        }
+
+        return $exitCode;
     }
 
-    private function handleAuditAi(): void
+    private function handleAuditAi(): int
     {
         $this->enableQuietMode();
-        $this->commandRegistry->executeCommand('composer', [
+
+        return $this->commandRegistry->executeCommand('composer', [
             'audit', '--format=summary', '--no-interaction', '--no-ansi',
         ]);
     }
 
-    private function handleSchemaValidateAi(): void
+    private function handleSchemaValidateAi(): int
     {
         if (!$this->composer->isSymfonyProject()) {
-            return;
+            return 0;
         }
 
         if (!$this->composer->hasPackage('doctrine/orm') && !$this->composer->hasPackage('doctrine/doctrine-bundle')) {
-            return;
+            return 0;
         }
 
         $this->enableQuietMode();
-        $this->commandRegistry->executeCommand('symfony', [
+
+        return $this->commandRegistry->executeCommand('symfony', [
             'doctrine:schema:validate', '--env=test', '--no-interaction', '--no-ansi',
         ]);
     }
 
-    private function handleAll(): void
+    private function handleAll(): int
     {
-        $this->commandRegistry->executeAll();
+        return $this->commandRegistry->executeAll();
     }
 
     private function handlePsAi(): void
@@ -281,17 +293,19 @@ class Application
     }
 
     /** @param array<string> $args */
-    private function handleSymfony(array $args): void
+    private function handleSymfony(array $args): int
     {
         $consoleArgs = array_slice($args, 2);
-        $this->commandRegistry->executeCommand('symfony', $consoleArgs);
+
+        return $this->commandRegistry->executeCommand('symfony', $consoleArgs);
     }
 
     /** @param array<string> $args */
-    private function handleComposer(array $args): void
+    private function handleComposer(array $args): int
     {
         $consoleArgs = array_slice($args, 2);
-        $this->commandRegistry->executeCommand('composer', $consoleArgs);
+
+        return $this->commandRegistry->executeCommand('composer', $consoleArgs);
     }
 
     private function handleLink(): void
@@ -300,9 +314,8 @@ class Application
         $this->docker->displayWebLink();
     }
 
-    private function handleSandbox(): void
+    private function handleSandbox(): int
     {
-        $sandboxCommand = new SandboxCommand($this->docker);
-        $sandboxCommand->execute();
+        return new SandboxCommand($this->docker)->execute();
     }
 }
