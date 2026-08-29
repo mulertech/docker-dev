@@ -14,6 +14,27 @@ class Symfony
         $this->composer = $composer;
     }
 
+    /**
+     * Remplace une ligne dans la SEULE configuration de base.
+     *
+     * str_replace remplace toutes les occurrences. Or ces fichiers portent la même clé deux
+     * fois : une fois en configuration de base, une fois sous une clause when@. Si la base a
+     * déjà été convertie lors d'une exécution antérieure, la seule correspondance restante
+     * est celle de la surcharge d'environnement — que le remplacement détruit alors, en
+     * silence, alors qu'elle existe précisément pour que les tests lancés hors de Docker
+     * Compose ne dépendent pas d'un fichier monté.
+     */
+    private function replaceInBaseSection(string $content, string $search, string $replacement): string
+    {
+        $limit = strpos($content, "\nwhen@");
+
+        if (false === $limit) {
+            return str_replace($search, $replacement, $content);
+        }
+
+        return str_replace($search, $replacement, substr($content, 0, $limit)).substr($content, $limit);
+    }
+
     public function configureDoctrine(): void
     {
         $projectDir = $this->composer->getProjectDir();
@@ -51,7 +72,7 @@ class Symfony
         password: '%env(trim:file:DATABASE_PASSWORD_FILE)%'
         driver: 'pdo_pgsql'";
 
-        return str_replace($oldConfig, $newConfig, $content);
+        return $this->replaceInBaseSection($content, $oldConfig, $newConfig);
     }
 
     private function applyDoctrineServerVersion(string $content): string
@@ -155,7 +176,7 @@ class Symfony
             $newConfig = "# Modified by mulertech/docker-dev package for Docker environment
             dsn: '%env(trim:file:MAILER_DSN_FILE)%'";
 
-            $updatedContent = str_replace($oldConfig, $newConfig, $mailerContent);
+            $updatedContent = $this->replaceInBaseSection($mailerContent, $oldConfig, $newConfig);
 
             if ($updatedContent !== $mailerContent) {
                 $mailerContent = $updatedContent;
@@ -234,7 +255,7 @@ class Symfony
             $newConfig = "# Modified by mulertech/docker-dev package for Docker environment
     secret: '%env(trim:file:APP_SECRET_FILE)%'";
 
-            $updatedContent = str_replace($oldConfig, $newConfig, $frameworkContent);
+            $updatedContent = $this->replaceInBaseSection($frameworkContent, $oldConfig, $newConfig);
 
             if ($updatedContent !== $frameworkContent) {
                 $frameworkContent = $updatedContent;
