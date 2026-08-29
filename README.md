@@ -395,7 +395,7 @@ Each module is an independent Docker Compose file that can be freely combined wi
 | `frankenphp` | FrankenPHP (Caddy) | **Default.** Modern PHP app server built on Caddy. Defines the shared network. |
 | `apache-php` | Apache + PHP | Alternative base web server with Apache + mod_php. Defines the shared network. |
 | `apache-html` | Apache | Static web server without PHP (httpd:2.4-alpine). Defines the shared network. |
-| `symfony` | *(overlay)* | Adds Symfony configuration: php.ini, Caddyfile/apache.conf, mailer secret. |
+| `symfony` | *(overlay)* | Adds Symfony configuration: php.ini, Caddyfile/apache.conf, mailer and application secrets. |
 | `postgres` | PostgreSQL 16 | PostgreSQL database with volume persistence and SQL init scripts. |
 | `mysql` | MySQL 8 | MySQL database with volume persistence, UTF-8 charset, and SQL init scripts. |
 | `pgvector` | PostgreSQL 17 + pgvector | PostgreSQL with vector embeddings extension for AI/RAG projects. |
@@ -554,7 +554,7 @@ Configure PHPStorm to work with your Docker development environment:
    - Path to script: `/app/vendor/autoload.php` (FrankenPHP) or `/var/www/html/vendor/autoload.php` (Apache-PHP)
 5. Default configuration file: `/app/phpunit.dist.xml` (FrankenPHP) or `/var/www/html/phpunit.dist.xml` (Apache-PHP)
 
-> **Note for Symfony projects:** PHPStorm runs tests outside of Docker Compose, so environment variables and secrets from compose files are not available. The `mtdocker init` command automatically generates a `.env.test.local` file with the database connection settings (`DATABASE_HOST=host.docker.internal`, dynamic port, credentials) and configures `when@test` overrides in `doctrine.yaml` and `mailer.yaml` to use direct environment variables instead of file-based secrets. This file is regenerated on each `mtdocker init` to keep ports in sync.
+> **Note for Symfony projects:** PHPStorm runs tests outside of Docker Compose, so environment variables and secrets from compose files are not available. The `mtdocker init` command automatically generates a `.env.test.local` file with the database connection settings (`DATABASE_HOST=host.docker.internal`, dynamic port, credentials) and configures `when@test` overrides in `doctrine.yaml`, `mailer.yaml` and `framework.yaml` to use direct environment variables instead of file-based secrets. This file is regenerated on each `mtdocker init` to keep ports in sync.
 
 ## Architecture
 

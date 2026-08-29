@@ -167,6 +167,116 @@ class Symfony
         $this->configureMailerTest($mailerPath, $mailerContent);
     }
 
+    /**
+     * Les trois configure* reposent sur le remplacement d'une chaîne exacte, celle que
+     * produisent les recettes Symfony. Si une recette change cette ligne, ou si le projet
+     * l'a éditée à la main, le remplacement ne trouve rien — et ne dit rien.
+     *
+     * Le silence est le vrai risque : la production ne met plus aucune de ces trois valeurs
+     * dans le .env, puisque celui-ci est copié dans l'image. Une clé restée branchée sur
+     * l'environnement n'échouerait donc qu'au déploiement, loin de sa cause.
+     */
+    public function verifyConfiguration(): void
+    {
+        $expected = [
+            'config/packages/doctrine.yaml' => "password: '%env(trim:file:DATABASE_PASSWORD_FILE)%'",
+            'config/packages/mailer.yaml' => "dsn: '%env(trim:file:MAILER_DSN_FILE)%'",
+            'config/packages/framework.yaml' => "secret: '%env(trim:file:APP_SECRET_FILE)%'",
+        ];
+
+        $projectDir = $this->composer->getProjectDir();
+        $missing = [];
+
+        foreach ($expected as $relativePath => $line) {
+            $path = $projectDir.DIRECTORY_SEPARATOR.$relativePath;
+
+            // Un fichier absent signifie que le composant n'est pas installé : rien à vérifier.
+            if (!file_exists($path)) {
+                continue;
+            }
+
+            if (!str_contains((string) file_get_contents($path), $line)) {
+                $missing[$relativePath] = $line;
+            }
+        }
+
+        if ([] === $missing) {
+            return;
+        }
+
+        echo "\n⚠️  These secrets are not wired to a mounted file:\n";
+        foreach ($missing as $relativePath => $line) {
+            echo '   - '.$relativePath.' — expected: '.$line."\n";
+        }
+        echo "   Production mounts them as Docker secrets and keeps no value in .env, which is\n";
+        echo "   copied into the image. A key still read from the environment fails at deployment.\n";
+    }
+
+    /**
+     * APP_SECRET signe les jetons CSRF, les cookies remember-me et les URI signées. Le lire
+     * depuis un fichier plutôt que depuis le .env évite qu'il finisse dans une couche d'image :
+     * en production le .env de déploiement est copié dans l'image comme .env de Symfony, et une
+     * couche survit à toute correction ultérieure du fichier.
+     */
+    public function configureFramework(): void
+    {
+        $projectDir = $this->composer->getProjectDir();
+        $frameworkPath = $projectDir.'/config/packages/framework.yaml';
+
+        if (!file_exists($frameworkPath)) {
+            return;
+        }
+
+        $frameworkContent = (string) file_get_contents($frameworkPath);
+
+        if (!str_contains($frameworkContent, '# Modified by mulertech/docker-dev package for Docker environment')) {
+            $oldConfig = "secret: '%env(APP_SECRET)%'";
+            $newConfig = "# Modified by mulertech/docker-dev package for Docker environment
+    secret: '%env(trim:file:APP_SECRET_FILE)%'";
+
+            $updatedContent = str_replace($oldConfig, $newConfig, $frameworkContent);
+
+            if ($updatedContent !== $frameworkContent) {
+                $frameworkContent = $updatedContent;
+                file_put_contents($frameworkPath, $frameworkContent);
+                echo "Updated config/packages/framework.yaml for Docker environment\n";
+            }
+        }
+
+        $this->configureFrameworkTest($frameworkPath, $frameworkContent);
+    }
+
+    /**
+     * Les variables de type fichier ne sont pas disponibles quand les tests tournent hors de
+     * Docker Compose — PHPStorm, par exemple. L'environnement de test lit donc APP_SECRET
+     * directement, comme le font déjà doctrine.yaml et mailer.yaml.
+     *
+     * La présence de la valeur d'environnement sert de garde : tant que la configuration de
+     * base n'a pas été convertie, il n'y a rien à surcharger.
+     */
+    private function configureFrameworkTest(string $frameworkPath, string $frameworkContent): void
+    {
+        if (str_contains($frameworkContent, "secret: '%env(APP_SECRET)%'")) {
+            return;
+        }
+
+        $search = "when@test:\n    framework:\n";
+
+        if (str_contains($frameworkContent, $search)) {
+            $updatedContent = str_replace(
+                $search,
+                $search."        secret: '%env(APP_SECRET)%'\n",
+                $frameworkContent,
+            );
+            file_put_contents($frameworkPath, $updatedContent);
+
+            return;
+        }
+
+        $frameworkContent .= "\nwhen@test:\n    framework:\n        secret: '%env(APP_SECRET)%'\n";
+        file_put_contents($frameworkPath, $frameworkContent);
+    }
+
     private function configureMailerTest(string $mailerPath, string $mailerContent): void
     {
         if (str_contains($mailerContent, "dsn: '%env(MAILER_DSN)%'")) {

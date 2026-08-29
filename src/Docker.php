@@ -164,6 +164,8 @@ class Docker
             $symfony->configureDoctrine();
             $symfony->configureDoctrineTest();
             $symfony->configureMailer();
+            $symfony->configureFramework();
+            $symfony->verifyConfiguration();
 
             $hasDatabase = [] !== array_intersect(['postgres', 'pgvector', 'postgis', 'mysql'], $modules);
             if ($hasDatabase) {
@@ -702,35 +704,57 @@ class Docker
             || in_array('postgis', $modules, true)
             || in_array('mysql', $modules, true);
 
+        /** @var array<string> $failures */
+        $failures = [];
+
         if (!is_dir($projectDir.DIRECTORY_SEPARATOR.'vendor')) {
-            if (!$this->quiet) {
-                echo "Installing Composer dependencies...\n";
-            }
-            $this->quietPassthru('docker exec '.escapeshellarg($containerName).' composer install --no-interaction');
+            $this->runSetupStep(
+                'Installing Composer dependencies...',
+                'docker exec '.escapeshellarg($containerName).' composer install --no-interaction',
+                $failures,
+            );
         }
 
         if ($isSymfony) {
             if ($this->composer->hasFile('package.json') && !is_dir($projectDir.DIRECTORY_SEPARATOR.'node_modules')) {
-                if (!$this->quiet) {
-                    echo "Installing npm dependencies...\n";
-                }
-                $this->quietPassthru('docker exec '.escapeshellarg($containerName).' npm install');
+                $this->runSetupStep(
+                    'Installing npm dependencies...',
+                    'docker exec '.escapeshellarg($containerName).' npm install',
+                    $failures,
+                );
             }
 
             if ($this->composer->hasPackage('symfonycasts/tailwind-bundle')) {
-                if (!$this->quiet) {
-                    echo "Building Tailwind CSS...\n";
-                }
-                $this->quietPassthru('docker exec '.escapeshellarg($containerName).' php bin/console tailwind:build');
+                $this->runSetupStep(
+                    'Building Tailwind CSS...',
+                    'docker exec '.escapeshellarg($containerName).' php bin/console tailwind:build',
+                    $failures,
+                );
             }
 
             if ($hasDb && $this->composer->hasPackage('doctrine/doctrine-migrations-bundle')) {
-                $this->waitForDatabase($containerName, $modules);
-                if (!$this->quiet) {
-                    echo "Running test database migrations...\n";
+                if ($this->waitForDatabase($modules)) {
+                    $this->runSetupStep(
+                        'Running test database migrations...',
+                        'docker exec '.escapeshellarg($containerName).' php bin/console doctrine:migrations:migrate --no-interaction --env=test',
+                        $failures,
+                    );
+                } else {
+                    // Migrer sans base joignable échoue à coup sûr : la tentative n'apporterait
+                    // qu'une seconde erreur, moins parlante que celle-ci.
+                    $failures[] = 'database never became ready (test migrations skipped)';
                 }
-                $this->quietPassthru('docker exec '.escapeshellarg($containerName).' php bin/console doctrine:migrations:migrate --no-interaction --env=test');
             }
+        }
+
+        if ([] !== $failures) {
+            echo "\n❌ First-time setup incomplete:\n";
+            foreach ($failures as $failure) {
+                echo '   - '.$failure."\n";
+            }
+            echo "   .mtdocker/.setup-done was NOT written: the next `mtdocker up -d` runs the setup again.\n";
+
+            return;
         }
 
         file_put_contents($markerPath, date('Y-m-d H:i:s')."\n");
@@ -739,39 +763,73 @@ class Docker
         }
     }
 
-    private function quietPassthru(string $command): void
+    /**
+     * Un pas du premier démarrage. Le marqueur .setup-done n'est écrit que si tous ont réussi :
+     * un échec ignoré laisserait un projet à moitié installé qui se croit prêt, et qui ne
+     * retenterait jamais puisque le marqueur existerait.
+     *
+     * @param array<string> $failures collecte les libellés en échec, passée par référence
+     */
+    private function runSetupStep(string $label, string $command, array &$failures): void
     {
+        if (!$this->quiet) {
+            echo $label."\n";
+        }
+
+        $exitCode = 0;
+        $output = [];
+
         if ($this->quiet) {
-            exec($command.' 2>&1');
+            exec($command.' 2>&1', $output, $exitCode);
         } else {
-            passthru($command);
+            passthru($command.' 2>&1', $exitCode);
+        }
+
+        if (0 === $exitCode) {
+            return;
+        }
+
+        $failures[] = rtrim($label, '.').' (exit code: '.$exitCode.')';
+
+        // En mode silencieux la sortie a été capturée : sans elle, le motif de l'échec
+        // serait perdu, et le message ci-dessous ne dirait que « ça a raté ».
+        if ($this->quiet && [] !== $output) {
+            echo "\n".$label."\n";
+            echo implode("\n", array_slice($output, -15))."\n";
         }
     }
 
-    /** @param array<string> $modules */
-    private function waitForDatabase(string $containerName, array $modules): void
+    /**
+     * @param array<string> $modules
+     *
+     * @return bool false quand la base n'a jamais répondu — l'appelant doit alors renoncer
+     *              plutôt que de lancer une commande dont l'échec est certain
+     */
+    private function waitForDatabase(array $modules): bool
     {
         if (in_array('postgres', $modules, true) || in_array('pgvector', $modules, true) || in_array('postgis', $modules, true)) {
             $dbContainer = $this->getProjectBaseName().'-postgres';
-            for ($i = 0; $i < 30; ++$i) {
-                $result = exec('docker exec '.escapeshellarg($dbContainer).' pg_isready -U user 2>/dev/null', $output, $exitCode);
-                if (0 === $exitCode) {
-                    return;
-                }
-                sleep(1);
-            }
-            echo "Warning: Database may not be ready yet.\n";
+            $probe = 'docker exec '.escapeshellarg($dbContainer).' pg_isready -U user 2>/dev/null';
         } elseif (in_array('mysql', $modules, true)) {
             $dbContainer = $this->getProjectBaseName().'-mysql';
-            for ($i = 0; $i < 30; ++$i) {
-                exec('docker exec '.escapeshellarg($dbContainer).' mysqladmin ping -u user -ppassword 2>/dev/null', $output, $exitCode);
-                if (0 === $exitCode) {
-                    return;
-                }
-                sleep(1);
-            }
-            echo "Warning: Database may not be ready yet.\n";
+            $probe = 'docker exec '.escapeshellarg($dbContainer).' mysqladmin ping -u user -ppassword 2>/dev/null';
+        } else {
+            return true;
         }
+
+        for ($i = 0; $i < 30; ++$i) {
+            $output = [];
+            $exitCode = 0;
+            exec($probe, $output, $exitCode);
+            if (0 === $exitCode) {
+                return true;
+            }
+            sleep(1);
+        }
+
+        echo "\n❌ Database container \"$dbContainer\" did not accept connections within 30 seconds.\n";
+
+        return false;
     }
 
     private function generatePortFromName(string $name): int

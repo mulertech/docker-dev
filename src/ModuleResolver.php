@@ -149,6 +149,7 @@ class ModuleResolver
 
         if (in_array('symfony', $modules, true)) {
             $files['secrets/mailer_dsn'] = 'secrets/mailer_dsn';
+            $files['secrets/app_secret'] = 'secrets/app_secret';
             $files['load.md'] = 'load.md';
         }
 
