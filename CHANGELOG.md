@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/SemVer).
 
+## v3.11.1 - 2026-08-29
+
+- Fixed: the doctrine, mailer and framework rewrites replaced **every** occurrence of the line they looked for instead of the one in the base configuration. These files carry the same key twice — once at the top level, once under a `when@` clause. On a project whose base configuration had already been converted by an older version and therefore carries no marker comment, the only remaining match was the environment override, which the rewrite then destroyed in silence — removing exactly the protection that lets tests run outside Docker Compose. Replacements are now confined to what precedes the first `when@` clause.
+- **Migration**: a project initialised with v3.11.0 may have lost its `when@test` override in `doctrine.yaml` or `mailer.yaml`. The symptom is a `%env(trim:file:…)%` line under a `when@` clause; restore it to the plain `%env(…)%` form.
+
 ## v3.11.0 - 2026-08-29
 
 - Added: the `symfony` module now ships an `app_secret` secret. `.mtdocker/secrets/app_secret` is created from the shared template, `APP_SECRET_FILE=/run/secrets/app_secret` is set on the `web` service, and `configureFramework()` rewrites `config/packages/framework.yaml` to `secret: '%env(trim:file:APP_SECRET_FILE)%'` — the same shape already used for the database password and the mailer DSN.
