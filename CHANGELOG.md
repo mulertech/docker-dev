@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/SemVer).
 
+## v3.11.0 - 2026-08-29
+
+- Added: the `symfony` module now ships an `app_secret` secret. `.mtdocker/secrets/app_secret` is created from the shared template, `APP_SECRET_FILE=/run/secrets/app_secret` is set on the `web` service, and `configureFramework()` rewrites `config/packages/framework.yaml` to `secret: '%env(trim:file:APP_SECRET_FILE)%'` — the same shape already used for the database password and the mailer DSN.
+- Added: a matching `when@test` override setting `secret: '%env(APP_SECRET)%'`, for the same reason as the doctrine and mailer ones — file-based environment variables are unavailable when PHPStorm runs tests outside Docker Compose. It is only inserted once the base configuration has been converted, so a project that still reads `%env(APP_SECRET)%` at the top level is left alone.
+- Note: the reason this matters beyond consistency is production. A deployment `.env` holding `APP_SECRET=` in clear is copied into the image as Symfony's own `.env`, and an image layer outlives any later edit to that file. Reading the value from a mounted secret keeps it out of the image entirely.
+- Fixed: the first-time setup no longer fails in silence. Every step — `composer install`, `npm install`, `tailwind:build`, the test migrations — now has its exit code checked, and `.mtdocker/.setup-done` is written **only** when all of them succeed. A failed step prints its name, its exit code and its captured output, and the absence of the marker makes the next `mtdocker up -d` try again. Until now a half-installed project marked itself done and never retried.
+- Fixed: `waitForDatabase()` returns whether the database ever answered instead of printing a warning and carrying on. Running migrations against a database that never came up could only produce a second, less readable error.
+- Added: `verifyConfiguration()` checks, after the rewrites, that `doctrine.yaml`, `mailer.yaml` and `framework.yaml` really carry their `%env(trim:file:…)%` line, and names the file and the expected line when one does not. The rewrites match an exact string produced by the Symfony recipes: should a recipe change that line, the replacement would find nothing and say nothing, and the key would only fail at deployment — far from its cause.
+- **Migration**: existing Symfony projects have their `framework.yaml` rewritten on the next `mtdocker init`. A project that already carries a hand-written `when@prod` override for `secret` must have it removed in the same commit — it would otherwise duplicate the base configuration.
+
 ## v3.10.0 - 2026-08-07
 
 - Added: `all-ai` now runs `composer audit --format=summary` after the existing checks. The `summary` format reports only the advisory counts per severity instead of the full table — `mtdocker composer audit` still gives the detailed report.
