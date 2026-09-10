@@ -90,6 +90,24 @@ Edit `sandbox.php`, then run:
 - `dump($var)` — Pretty-prints a variable with type and color formatting (ANSI for CLI, HTML for web).
 - `dd($var)` — Dump and die.
 
+## Development logs
+
+Bringing the stack up rotates `var/log/*.log` when a log was last written on an earlier day, or
+when it exceeds a size ceiling. `dev.log` becomes `dev.log.1`, overwriting the previous
+generation: one day of history is kept, nothing is deleted.
+
+A running stack is left untouched by every other command, so bringing it up is the gesture that
+opens a working session, and what a previous day wrote is no longer what anyone reads. Running
+`up` again the same day leaves the running log alone.
+
+The ceiling covers the other case, a single day verbose enough to reach hundreds of megabytes on
+its own. It defaults to 50 MB and is set per project:
+
+```dotenv
+# .mtdocker/.env
+LOG_ROTATE_MAX_MB=50   # 0 disables the ceiling, daily rotation still applies
+```
+
 ## Usage
 
 ### Development Environment (Modular System)

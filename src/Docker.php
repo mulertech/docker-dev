@@ -11,6 +11,12 @@ class Docker
     private ModuleResolver $moduleResolver;
     private bool $quiet = false;
 
+    /**
+     * Megabytes above which a development log is rotated on the spot, overridable per project
+     * through LOG_ROTATE_MAX_MB in .mtdocker/.env.
+     */
+    private const int DEFAULT_LOG_CEILING_MB = 50;
+
     public function __construct(Composer $composer)
     {
         $this->composer = $composer;
@@ -639,6 +645,7 @@ class Docker
     public function dockerComposeUp(string $arg2): void
     {
         $this->ensureEnvironment();
+        $this->rotateStaleLogs();
 
         $command = $this->dockerComposeCommand($this->upModules()).' up';
         $command .= '-d' === $arg2 ? ' -d' : '';
@@ -669,6 +676,98 @@ class Docker
         } else {
             passthru($command);
         }
+    }
+
+    /**
+     * Rotates the development logs when the containers are brought up.
+     *
+     * A running stack is left alone by every other command, so bringing it up is the gesture
+     * that opens a working session: what a previous day wrote is no longer what anyone reads.
+     * The size ceiling covers the other case, a single day verbose enough to reach hundreds of
+     * megabytes on its own.
+     *
+     * One generation is kept, and nothing is deleted. This runs while the containers are down,
+     * so no process holds the file open and renaming is safe, where a live rotation would have
+     * needed the writer to reopen its handle.
+     */
+    private function rotateStaleLogs(): void
+    {
+        $logDir = $this->composer->getProjectDir().DIRECTORY_SEPARATOR.'var'.DIRECTORY_SEPARATOR.'log';
+
+        if (!is_dir($logDir)) {
+            return;
+        }
+
+        $ceiling = $this->logSizeCeiling();
+        $today = date('Y-m-d');
+        $logs = glob($logDir.DIRECTORY_SEPARATOR.'*.log');
+
+        foreach (false !== $logs ? $logs : [] as $log) {
+            $size = filesize($log);
+            $modified = filemtime($log);
+
+            if (false === $size || false === $modified || 0 === $size) {
+                continue;
+            }
+
+            $fromAnotherDay = date('Y-m-d', $modified) !== $today;
+            $overCeiling = $ceiling > 0 && $size > $ceiling;
+
+            if (!$fromAnotherDay && !$overCeiling) {
+                continue;
+            }
+
+            if (!rename($log, $log.'.1')) {
+                echo sprintf("Could not rotate %s: check its permissions.\n", $log);
+                continue;
+            }
+
+            echo sprintf(
+                "🗄  %s (%s) rotated to %s.1\n",
+                basename($log),
+                $this->humanSize($size),
+                basename($log),
+            );
+        }
+    }
+
+    /**
+     * Size above which a log is rotated without waiting for the next day, in bytes.
+     *
+     * Read from LOG_ROTATE_MAX_MB in .mtdocker/.env, where 0 disables the ceiling and leaves the
+     * daily rotation alone. A value that is not a number is a configuration mistake, and saying
+     * so beats rotating on a silently assumed default.
+     */
+    private function logSizeCeiling(): int
+    {
+        $envPath = $this->composer->getProjectDir().DIRECTORY_SEPARATOR.'.mtdocker'.DIRECTORY_SEPARATOR.'.env';
+
+        if (!is_file($envPath)) {
+            return self::DEFAULT_LOG_CEILING_MB * 1024 * 1024;
+        }
+
+        $env = (string) file_get_contents($envPath);
+
+        if (1 !== preg_match('/^LOG_ROTATE_MAX_MB=(.*)$/m', $env, $matches)) {
+            return self::DEFAULT_LOG_CEILING_MB * 1024 * 1024;
+        }
+
+        $value = trim($matches[1]);
+
+        if (1 !== preg_match('/^\d+$/', $value)) {
+            echo sprintf("LOG_ROTATE_MAX_MB must be a whole number of megabytes, got \"%s\".\n", $value);
+
+            return self::DEFAULT_LOG_CEILING_MB * 1024 * 1024;
+        }
+
+        return (int) $value * 1024 * 1024;
+    }
+
+    private function humanSize(int $bytes): string
+    {
+        return $bytes >= 1024 * 1024
+            ? sprintf('%.0f MB', $bytes / 1024 / 1024)
+            : sprintf('%.0f kB', $bytes / 1024);
     }
 
     public function dockerComposeDown(): void
