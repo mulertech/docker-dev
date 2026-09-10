@@ -21,11 +21,47 @@ class Application
         $this->commandRegistry = new CommandRegistry($this->docker, $this->composer);
     }
 
+    /**
+     * Every command this dispatcher answers to, named in one place.
+     *
+     * A command added to the switch without being added here is refused the first time it is
+     * typed, which is a five-second fix; the reverse, a name listed with no branch to serve it,
+     * raises the LogicException below. Neither drift can pass unnoticed, which is the point of
+     * keeping the list rather than pointing at the README.
+     */
+    private const array COMMANDS = [
+        'test',
+        'test-ai',
+        'test-coverage',
+        'test-coverage-ai',
+        'phpstan',
+        'phpstan-ai',
+        'cs-fixer',
+        'cs-fixer-ai',
+        'all',
+        'all-ai',
+        'up',
+        'down',
+        'ps',
+        'ps-ai',
+        'name',
+        'init',
+        'modules',
+        'link',
+        'sandbox',
+        'symfony',
+        'composer',
+    ];
+
     /** @param array<string> $args */
     public function run(array $args): int
     {
         $arg1 = $args[1] ?? '';
         $arg2 = $args[2] ?? '';
+
+        if (!in_array($arg1, self::COMMANDS, true)) {
+            return $this->reportUnknownCommand($arg1);
+        }
 
         switch ($arg1) {
             case 'test-coverage':
@@ -78,9 +114,30 @@ class Application
                 break;
             case 'sandbox':
                 return $this->handleSandbox();
+            default:
+                // Only reachable by editing this file: a name was added to COMMANDS without a
+                // branch to serve it. Saying so beats returning success and doing nothing.
+                throw new \LogicException(sprintf('Command "%s" is declared but not handled.', $arg1));
         }
 
         return 0;
+    }
+
+    /**
+     * Names a mistyped command and lists what would have worked.
+     *
+     * Without this, an unknown command fell through the switch, exited zero and printed nothing:
+     * the shell wrapper relays anything it does not recognise, so a typo looked like a success.
+     */
+    private function reportUnknownCommand(string $command): int
+    {
+        $message = '' === $command
+            ? "Usage: mtdocker <command>\n"
+            : sprintf("Unknown command \"%s\".\n", $command);
+
+        fwrite(STDERR, $message."\nAvailable commands:\n  ".implode("\n  ", self::COMMANDS)."\n");
+
+        return 1;
     }
 
     private function handleTestCoverage(): int
