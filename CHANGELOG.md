@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/SemVer).
 
+## v3.12.0 - 2026-09-10
+
+- Added: bringing the containers up rotates `var/log/*.log`. A log last written on an earlier day is rotated, and so is one that exceeds a size ceiling — `dev.log` becomes `dev.log.1`, overwriting the previous generation. One day of history is kept, nothing is deleted.
+- Note: the trigger is `up` rather than a timer because a running stack is left untouched by every other command, so bringing it up is the gesture that opens a working session: what a previous day wrote is no longer what anyone reads. Running `up` again the same day leaves the running log alone. The ceiling covers the other case, a single day verbose enough to reach hundreds of megabytes on its own.
+- Note: this also rules out `logrotate` inside the image. Containers are torn down at the end of any command that started them, so a periodic in-container job would almost never fire. Rotating while they are down has a second benefit: no process holds the file open, so a plain rename is enough where a live rotation would have required `copytruncate` and a writer willing to reopen its handle.
+- Added: `LOG_ROTATE_MAX_MB` in `.mtdocker/.env` sets that ceiling, in megabytes. It defaults to 50, and `0` disables it while leaving the daily rotation in place. A value that is not a whole number is reported instead of being silently replaced by the default.
+- Fixed: an unknown command no longer exits zero without printing anything. It used to fall straight through the dispatcher, which mattered more than it looked: a shell wrapper relaying whatever it does not recognise turned a typo into what looked like a success.
+- Added: an unknown command now names itself and lists the commands that would have worked; `mtdocker` with no argument prints the same list as usage. Both write to stderr and return 1, so a script reading stdout is unaffected and `&&` chains stop where they should.
+- Added: the list of commands lives in one place and guards the dispatcher, so neither direction of drift can pass unnoticed. A command added to the dispatcher but missing from the list is refused the first time it is typed; a name listed with no branch to serve it raises a `LogicException` naming it, instead of returning success and doing nothing.
+
 ## v3.11.2 - 2026-08-29
 
 - Fixed: `mtdocker` now exits with the exit code of what it ran. Every level dropped it —
