@@ -41,8 +41,8 @@ All commands are run via the `mtdocker` binary. Within this repository itself (f
 ### Core Classes (`src/`)
 
 - **`Application`** — CLI dispatcher. Routes commands (`test`, `up`, `down`, `init`, `modules`, `phpstorm`, `symfony`, `composer`, `phpstan`, `cs-fixer`, `all`, `ps`, `name`, `link`) to Docker or CommandRegistry.
-- **`Composer`** — Reads the consumer project's `composer.json` to detect PHP version, project type (Symfony, database-needed, AI/RAG packages), project root directory, and package presence (`hasPackage()`).
-- **`Docker`** — Manages Docker Compose lifecycle (`up`, `down`, `ps`), module initialization, port generation, container naming, `.gitignore` management, and first-time setup. Uses multi-file compose via `docker compose -f ... -f ...` with modules from `templates/modules/`.
+- **`Composer`** — Reads the consumer project's `composer.json` to detect PHP version, project type (Symfony, database-needed, AI/RAG packages), project root directory, package presence (`hasPackage()`) and the declared `ext-*` extensions (`requiredExtensions()`).
+- **`Docker`** — Manages Docker Compose lifecycle (`up`, `down`, `ps`), module initialization, port generation, container naming, `.gitignore` management, and first-time setup. Uses multi-file compose via `docker compose -f ... -f ...` with modules from `templates/modules/`. Every compose command carries `PHP_EXTENSIONS`, which the PHP Dockerfiles install and record as the `mtdocker.php-extensions` image label; `up` rebuilds the web image when it lacks one of them.
 - **`ModuleResolver`** — Encapsulates module detection logic. Uses `Composer` analysis to determine which modules are needed, resolves Dockerfiles and shared files to copy.
 - **`Symfony`** — Applies Symfony-specific config: patches `config/packages/doctrine.yaml` and `config/packages/mailer.yaml` to use Docker environment variables and file-based secrets.
 

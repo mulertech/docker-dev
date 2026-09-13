@@ -17,6 +17,12 @@ RUN install-php-extensions \
     mbstring \
     opcache
 
+# Extensions the project declares as ext-* in composer.json, passed by mtdocker. The label lets
+# mtdocker tell on start-up whether the image still satisfies those declarations.
+ARG PHP_EXTENSIONS
+RUN if [ -n "$PHP_EXTENSIONS" ]; then install-php-extensions $PHP_EXTENSIONS; fi
+LABEL mtdocker.php-extensions="$PHP_EXTENSIONS"
+
 # Copy Composer from official image
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 

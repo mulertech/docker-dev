@@ -45,6 +45,11 @@ class Docker
         return str_replace('.', '-', $this->getContainerName());
     }
 
+    public function getWebImage(): string
+    {
+        return $this->getProjectName().'-web:latest';
+    }
+
     public function getProjectBaseName(): string
     {
         return basename($this->composer->getProjectDir());
@@ -479,6 +484,7 @@ class Docker
         $modules ??= $this->loadModuleConfig();
 
         $envVars = 'DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 ';
+        $envVars .= 'PHP_EXTENSIONS='.escapeshellarg(implode(' ', $this->composer->requiredExtensions())).' ';
 
         if (in_array('postgres', $modules, true)) {
             $major = $this->postgresMajorVersion($mtdockerPath);
@@ -648,6 +654,7 @@ class Docker
         $this->rotateStaleLogs();
 
         $command = $this->dockerComposeCommand($this->upModules()).' up';
+        $command .= $this->webImageLacksDeclaredExtensions() ? ' --build' : '';
         $command .= '-d' === $arg2 ? ' -d' : '';
 
         if ('-d' === $arg2) {
@@ -676,6 +683,70 @@ class Docker
         } else {
             passthru($command);
         }
+    }
+
+    /**
+     * Whether the web image must be rebuilt before starting, because it lacks an extension that
+     * composer.json declares.
+     *
+     * Compose rebuilds an image only when asked, so an ext-* requirement the image predates would
+     * leave Composer refusing every resolution inside the container, naming the extension but
+     * never the image. The label written at build time settles the usual case with one inspect;
+     * only a label that disagrees costs a run of `php -m`, which says what the image loads.
+     */
+    private function webImageLacksDeclaredExtensions(): bool
+    {
+        if ([] === array_intersect(['frankenphp', 'apache-php'], $this->loadModuleConfig())) {
+            return false;
+        }
+
+        $required = $this->composer->requiredExtensions();
+        if ([] === $required) {
+            return false;
+        }
+
+        $image = $this->getWebImage();
+        $label = [];
+        $exitCode = 0;
+        exec('docker image inspect --format '.escapeshellarg('{{ index .Config.Labels "mtdocker.php-extensions" }}').' '.escapeshellarg($image).' 2>/dev/null', $label, $exitCode);
+
+        if (0 !== $exitCode || implode(' ', $required) === trim(implode('', $label))) {
+            return false;
+        }
+
+        $loaded = [];
+        exec('docker run --rm --entrypoint php '.escapeshellarg($image).' -m 2>&1', $loaded, $exitCode);
+
+        if (0 !== $exitCode) {
+            echo sprintf(
+                "\n❌ Could not list the extensions loaded by %s (exit code: %d), so its match with composer.json is unknown:\n%s\n\n",
+                $image,
+                $exitCode,
+                implode("\n", array_slice($loaded, -5)),
+            );
+
+            return false;
+        }
+
+        $missing = array_values(array_diff($required, array_map(Composer::normalizeExtensionName(...), $loaded)));
+        if ([] === $missing) {
+            return false;
+        }
+
+        $dockerfile = $this->composer->getProjectDir().DIRECTORY_SEPARATOR.'.mtdocker'.DIRECTORY_SEPARATOR.'php'.DIRECTORY_SEPARATOR.'Dockerfile';
+        if (!is_file($dockerfile) || !str_contains((string) file_get_contents($dockerfile), 'PHP_EXTENSIONS')) {
+            echo sprintf(
+                "\n❌ Image %s lacks %s, declared in composer.json, and .mtdocker/php/Dockerfile does not install the ext-* requirements.\n   Run 'mtdocker init' to regenerate it, then 'mtdocker up -d'.\n\n",
+                $image,
+                implode(', ', $missing),
+            );
+
+            return false;
+        }
+
+        echo sprintf("🔧 Image %s lacks %s, declared in composer.json: rebuilding it.\n", $image, implode(', ', $missing));
+
+        return true;
     }
 
     /**

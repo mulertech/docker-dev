@@ -19,6 +19,12 @@ RUN install-php-extensions \
     opcache \
     pcov
 
+# Extensions the project declares as ext-* in composer.json, passed by mtdocker. The label lets
+# mtdocker tell on start-up whether the image still satisfies those declarations.
+ARG PHP_EXTENSIONS
+RUN if [ -n "$PHP_EXTENSIONS" ]; then install-php-extensions $PHP_EXTENSIONS; fi
+LABEL mtdocker.php-extensions="$PHP_EXTENSIONS"
+
 ARG INSTALL_MYSQL_CLIENT=0
 
 # Install MySQL client (mysqldump, mysql) only if needed

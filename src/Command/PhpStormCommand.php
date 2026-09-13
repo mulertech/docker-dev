@@ -51,7 +51,7 @@ class PhpStormCommand
             ));
         }
 
-        $image = $this->docker->getProjectName().'-web:latest';
+        $image = $this->docker->getWebImage();
         if (!$this->imageExists($image)) {
             return $this->fail(sprintf(
                 "Image %s is not built, so PhpStorm would fail to probe the interpreter. Run 'mtdocker up -d' first.",

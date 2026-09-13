@@ -472,6 +472,15 @@ Some modules back a service that has **no detectable composer dependency** (e.g.
 
 The listed modules are appended (deduplicated) to whatever auto-detection resolves. This is the supported way to enable the `valhalla` and `photon` modules.
 
+#### PHP extensions (`ext-*` in `composer.json`)
+
+Every `ext-*` the project requires, in `require` or `require-dev`, is installed into the web image on top of the extensions its Dockerfile carries. The image satisfies what Composer demands, so a requirement absent from the base PHP images — `ext-pcntl`, for instance — never makes Composer refuse a resolution inside the container.
+
+- **Read from `composer.json` at every command**, and passed to the build as `PHP_EXTENSIONS`: adding a requirement needs no `init`.
+- **Checked on `up`.** The image carries the list it was built with as its `mtdocker.php-extensions` label. When that label differs from `composer.json`, `mtdocker` asks the image which extensions it loads, and rebuilds it when one is missing.
+- **A `.mtdocker/php/Dockerfile` that does not install them** is reported on `up`, with the missing extensions: `mtdocker init` regenerates it.
+- **An extension the installer does not know fails the build**, naming it: a requirement the image cannot satisfy is refused while building, not at the first `composer install`.
+
 #### The `valhalla` routing module
 
 Enabled via the opt-in above, the `valhalla` module starts an official [valhalla/valhalla](https://github.com/valhalla/valhalla) container on the shared network and exposes `VALHALLA_URL=http://valhalla:8002` to the web service.

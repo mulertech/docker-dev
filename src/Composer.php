@@ -120,4 +120,42 @@ class Composer
 
         return array_values(array_filter($modules, 'is_string'));
     }
+
+    /**
+     * PHP extensions the project declares as ext-* in require and require-dev, sorted and named
+     * the way install-php-extensions names them. The web image installs exactly these.
+     *
+     * @return array<string>
+     */
+    public function requiredExtensions(): array
+    {
+        $data = json_decode((string) file_get_contents($this->getProjectDir().'/composer.json'), true);
+        $extensions = [];
+
+        foreach (['require', 'require-dev'] as $section) {
+            $requirements = is_array($data) ? ($data[$section] ?? null) : null;
+
+            foreach (is_array($requirements) ? array_keys($requirements) : [] as $package) {
+                if (str_starts_with((string) $package, 'ext-')) {
+                    $extensions[] = self::normalizeExtensionName(substr((string) $package, 4));
+                }
+            }
+        }
+
+        $extensions = array_values(array_unique($extensions));
+        sort($extensions);
+
+        return $extensions;
+    }
+
+    /**
+     * One spelling for an extension whether it comes from composer.json (`ext-zend-opcache`) or
+     * from `php -m` (`Zend OPcache`), matching the name install-php-extensions accepts.
+     */
+    public static function normalizeExtensionName(string $name): string
+    {
+        $name = str_replace(' ', '-', strtolower(trim($name)));
+
+        return 'zend-opcache' === $name ? 'opcache' : $name;
+    }
 }
