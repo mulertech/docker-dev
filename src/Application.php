@@ -3,6 +3,7 @@
 namespace MulerTech\DockerDev;
 
 use MulerTech\DockerDev\Command\CommandRegistry;
+use MulerTech\DockerDev\Command\PhpStormCommand;
 use MulerTech\DockerDev\Command\SandboxCommand;
 
 /**
@@ -47,6 +48,7 @@ class Application
         'name',
         'init',
         'modules',
+        'phpstorm',
         'link',
         'sandbox',
         'symfony',
@@ -105,6 +107,8 @@ class Application
             case 'modules':
                 $this->handleModules();
                 break;
+            case 'phpstorm':
+                return $this->handlePhpStorm();
             case 'symfony':
                 return $this->handleSymfony($args);
             case 'composer':
@@ -374,5 +378,10 @@ class Application
     private function handleSandbox(): int
     {
         return new SandboxCommand($this->docker)->execute();
+    }
+
+    private function handlePhpStorm(): int
+    {
+        return new PhpStormCommand($this->docker, $this->composer)->execute();
     }
 }

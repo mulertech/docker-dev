@@ -40,7 +40,7 @@ All commands are run via the `mtdocker` binary. Within this repository itself (f
 
 ### Core Classes (`src/`)
 
-- **`Application`** — CLI dispatcher. Routes commands (`test`, `up`, `down`, `init`, `modules`, `symfony`, `composer`, `phpstan`, `cs-fixer`, `all`, `ps`, `name`, `link`) to Docker or CommandRegistry.
+- **`Application`** — CLI dispatcher. Routes commands (`test`, `up`, `down`, `init`, `modules`, `phpstorm`, `symfony`, `composer`, `phpstan`, `cs-fixer`, `all`, `ps`, `name`, `link`) to Docker or CommandRegistry.
 - **`Composer`** — Reads the consumer project's `composer.json` to detect PHP version, project type (Symfony, database-needed, AI/RAG packages), project root directory, and package presence (`hasPackage()`).
 - **`Docker`** — Manages Docker Compose lifecycle (`up`, `down`, `ps`), module initialization, port generation, container naming, `.gitignore` management, and first-time setup. Uses multi-file compose via `docker compose -f ... -f ...` with modules from `templates/modules/`.
 - **`ModuleResolver`** — Encapsulates module detection logic. Uses `Composer` analysis to determine which modules are needed, resolves Dockerfiles and shared files to copy.
@@ -51,6 +51,7 @@ All commands are run via the `mtdocker` binary. Within this repository itself (f
 - **`CommandInterface`** — Contract: `getName()`, `getDefaultArgs()`, `execute()`, `requiresDocker()`.
 - **`BaseCommand`** — Abstract. Handles Docker lifecycle around command execution: starts container if not running, triggers first-time setup, runs command, stops container if it wasn't running before.
 - **`CommandRegistry`** — Registers and dispatches to: `PhpunitCommand` (key: `test`), `PhpStanCommand` (key: `phpstan`), `CsFixerCommand` (key: `cs-fixer`), `ComposerCommand` (key: `composer`), `SymfonyCommand` (key: `symfony`).
+- **`PhpStormCommand`** — Writes the project's `.idea` files so the IDE runs PHP, PHPUnit and inspections through the Docker image. Stands outside `BaseCommand` and the registry: it needs the image to exist but never starts a container, and first-time setup has no part in it. `SandboxCommand` stands outside for the same kind of reason, its container being the standalone `sandbox` module.
 
 ### Module System (`templates/`)
 

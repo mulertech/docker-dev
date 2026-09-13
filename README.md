@@ -150,6 +150,20 @@ The system detects your project type (Symfony, database, AI/RAG packages...) and
 ./vendor/bin/mtdocker ps
 ```
 
+### PhpStorm Project Setup
+
+Points PhpStorm at the project's Docker image, so tests, Composer and PHP inspections run through the container instead of a local PHP:
+
+```sh
+./vendor/bin/mtdocker phpstorm
+```
+
+It writes the project's own `.idea` files — the Docker interpreter and its volume binding, the PHP language level read from `composer.json`, and PHPUnit with the configuration file and autoloader as seen from inside the container. The interpreter is named after the image (`<project-name>-web:latest`) and attached to the IDE's Docker server, so nothing has to be picked in a dialog.
+
+The command refuses to write a half-working configuration: it names the missing piece when no module carries PHP, when the image is not built yet, when no PHPUnit configuration file is present, or when `composer.json` declares no PHP version.
+
+**With the project open in the IDE, finish with `File | Reload All from Disk`.** PhpStorm rereads `php.xml` on its own, but the interpreter *selection* lives in `workspace.xml`, which it only rereads on demand — and quitting instead of reloading writes its in-memory copy back over that selection. Nothing to do when the project is closed.
+
 ### Testing and Code Quality Tools
 
 Integrated testing tools work seamlessly within your development environment:
