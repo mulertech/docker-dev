@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/SemVer).
 
+## v3.13.0 - 2026-09-13
+
+- Added: `mtdocker phpstorm` configures the IDE for the current project — Docker interpreter and its volume binding, PHP language level read from `composer.json`, and PHPUnit with the configuration file and autoloader as seen from inside the container. It writes the project's `.idea/php.xml`, `.idea/php-docker-settings.xml` and `.idea/workspace.xml`, which is every setting that otherwise takes a pass through three settings dialogs per project.
+- Note: the interpreter is named after the image, `<project-name>-web:latest`, and the container path comes from the base module — `/app` for `frankenphp`, `/var/www/html` for `apache-php`. PhpStorm starts its own container from the image, so that path has to match the one the compose stack mounts, otherwise a path read in the IDE points at a file that is not there.
+- Note: the IDE rereads `php.xml` by itself, but the interpreter *selection* lives in `workspace.xml`, which it rereads only on demand. The command therefore ends by asking for `File | Reload All from Disk`, and says why: quitting the IDE instead writes its in-memory copy of `workspace.xml` back over the selection, leaving the interpreter declared but unselected.
+- Note: `workspace.xml` is edited in place rather than rebuilt, since the running IDE owns the rest of its content.
+- Added: the command refuses rather than write a half-working configuration, and names what is missing — no base module carrying PHP (listing the two that do), an image not built yet (pointing at `up -d`), no PHPUnit configuration file (listing the names looked for), or no `php` constraint in `composer.json`. An interpreter left without a PHP version has one cause, an IDE with no Docker server named `Docker`, so the report says where to add it.
+- Added: `ext-dom` to the package requirements, used to edit the IDE files without disturbing the components they already hold.
+
 ## v3.12.0 - 2026-09-10
 
 - Added: bringing the containers up rotates `var/log/*.log`. A log last written on an earlier day is rotated, and so is one that exceeds a size ceiling — `dev.log` becomes `dev.log.1`, overwriting the previous generation. One day of history is kept, nothing is deleted.
