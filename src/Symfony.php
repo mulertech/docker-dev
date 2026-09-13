@@ -15,14 +15,13 @@ class Symfony
     }
 
     /**
-     * Remplace une ligne dans la SEULE configuration de base.
+     * Replaces a line in the base configuration ONLY.
      *
-     * str_replace remplace toutes les occurrences. Or ces fichiers portent la même clé deux
-     * fois : une fois en configuration de base, une fois sous une clause when@. Si la base a
-     * déjà été convertie lors d'une exécution antérieure, la seule correspondance restante
-     * est celle de la surcharge d'environnement — que le remplacement détruit alors, en
-     * silence, alors qu'elle existe précisément pour que les tests lancés hors de Docker
-     * Compose ne dépendent pas d'un fichier monté.
+     * str_replace replaces every occurrence, and these files carry the same key twice: once
+     * in the base configuration, once under a when@ clause. When the base has already been
+     * converted by an earlier run, the only remaining match is the environment override —
+     * which a plain replacement would silently destroy, although it exists so that tests
+     * run outside Docker Compose do not depend on a mounted file.
      */
     private function replaceInBaseSection(string $content, string $search, string $replacement): string
     {
@@ -188,15 +187,6 @@ class Symfony
         $this->configureMailerTest($mailerPath, $mailerContent);
     }
 
-    /**
-     * Les trois configure* reposent sur le remplacement d'une chaîne exacte, celle que
-     * produisent les recettes Symfony. Si une recette change cette ligne, ou si le projet
-     * l'a éditée à la main, le remplacement ne trouve rien — et ne dit rien.
-     *
-     * Le silence est le vrai risque : la production ne met plus aucune de ces trois valeurs
-     * dans le .env, puisque celui-ci est copié dans l'image. Une clé restée branchée sur
-     * l'environnement n'échouerait donc qu'au déploiement, loin de sa cause.
-     */
     public function verifyConfiguration(): void
     {
         $expected = [
@@ -211,7 +201,6 @@ class Symfony
         foreach ($expected as $relativePath => $line) {
             $path = $projectDir.DIRECTORY_SEPARATOR.$relativePath;
 
-            // Un fichier absent signifie que le composant n'est pas installé : rien à vérifier.
             if (!file_exists($path)) {
                 continue;
             }
@@ -233,12 +222,6 @@ class Symfony
         echo "   copied into the image. A key still read from the environment fails at deployment.\n";
     }
 
-    /**
-     * APP_SECRET signe les jetons CSRF, les cookies remember-me et les URI signées. Le lire
-     * depuis un fichier plutôt que depuis le .env évite qu'il finisse dans une couche d'image :
-     * en production le .env de déploiement est copié dans l'image comme .env de Symfony, et une
-     * couche survit à toute correction ultérieure du fichier.
-     */
     public function configureFramework(): void
     {
         $projectDir = $this->composer->getProjectDir();
@@ -268,12 +251,12 @@ class Symfony
     }
 
     /**
-     * Les variables de type fichier ne sont pas disponibles quand les tests tournent hors de
-     * Docker Compose — PHPStorm, par exemple. L'environnement de test lit donc APP_SECRET
-     * directement, comme le font déjà doctrine.yaml et mailer.yaml.
+     * File-based variables are unavailable when tests run outside Docker Compose (PhpStorm,
+     * for instance), so the test environment reads APP_SECRET directly, as doctrine.yaml and
+     * mailer.yaml do.
      *
-     * La présence de la valeur d'environnement sert de garde : tant que la configuration de
-     * base n'a pas été convertie, il n'y a rien à surcharger.
+     * The environment value acts as the guard: while the base configuration still reads it,
+     * nothing has been converted and there is nothing to override.
      */
     private function configureFrameworkTest(string $frameworkPath, string $frameworkContent): void
     {

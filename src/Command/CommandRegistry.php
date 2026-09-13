@@ -44,10 +44,6 @@ class CommandRegistry
         return $this->commands[$name]->execute($args);
     }
 
-    /**
-     * Toutes les étapes tournent, même après un échec : on veut la liste complète des
-     * problèmes, pas le premier. Le code renvoyé est celui de la première qui a échoué.
-     */
     public function executeAll(): int
     {
         $exitCode = 0;

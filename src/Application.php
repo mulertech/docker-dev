@@ -227,12 +227,6 @@ class Application
         return $this->commandRegistry->executeCommand('cs-fixer', $consoleArgs);
     }
 
-    /**
-     * Toutes les étapes tournent, même après un échec : on veut la liste complète des
-     * problèmes en une passe. Le code renvoyé est celui de la première qui a échoué, sans
-     * quoi une suite de tests rouge passerait pour un succès auprès de tout appelant —
-     * chaîne d'intégration comme lecteur pressé.
-     */
     private function handleAllAi(): int
     {
         $this->enableQuietMode();

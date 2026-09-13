@@ -27,6 +27,4 @@ use MulerTech\DockerDev\Application;
 
 $app = new Application();
 
-// Le code de sortie doit remonter au shell : sans lui, une suite de tests rouge passerait
-// pour un succès auprès d'une chaîne d'intégration comme d'un lecteur pressé.
 exit($app->run($_SERVER['argv']));

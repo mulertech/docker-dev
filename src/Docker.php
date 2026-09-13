@@ -910,8 +910,6 @@ class Docker
                         $failures,
                     );
                 } else {
-                    // Migrer sans base joignable échoue à coup sûr : la tentative n'apporterait
-                    // qu'une seconde erreur, moins parlante que celle-ci.
                     $failures[] = 'database never became ready (test migrations skipped)';
                 }
             }
@@ -934,11 +932,7 @@ class Docker
     }
 
     /**
-     * Un pas du premier démarrage. Le marqueur .setup-done n'est écrit que si tous ont réussi :
-     * un échec ignoré laisserait un projet à moitié installé qui se croit prêt, et qui ne
-     * retenterait jamais puisque le marqueur existerait.
-     *
-     * @param array<string> $failures collecte les libellés en échec, passée par référence
+     * @param array<string> $failures
      */
     private function runSetupStep(string $label, string $command, array &$failures): void
     {
@@ -961,8 +955,6 @@ class Docker
 
         $failures[] = rtrim($label, '.').' (exit code: '.$exitCode.')';
 
-        // En mode silencieux la sortie a été capturée : sans elle, le motif de l'échec
-        // serait perdu, et le message ci-dessous ne dirait que « ça a raté ».
         if ($this->quiet && [] !== $output) {
             echo "\n".$label."\n";
             echo implode("\n", array_slice($output, -15))."\n";
@@ -971,9 +963,6 @@ class Docker
 
     /**
      * @param array<string> $modules
-     *
-     * @return bool false quand la base n'a jamais répondu — l'appelant doit alors renoncer
-     *              plutôt que de lancer une commande dont l'échec est certain
      */
     private function waitForDatabase(array $modules): bool
     {

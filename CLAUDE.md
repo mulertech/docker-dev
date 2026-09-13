@@ -8,30 +8,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-All commands are run via the `mtdocker` binary. Within this repository itself (for development/testing of the package), use:
+Consumer projects call the binary as `./vendor/bin/mtdocker`. This repository is the package itself, so its binary is `./mtdocker` at the root:
 
 ```sh
-# Run tests
-./vendor/bin/mtdocker test
+# PHP CS Fixer (applies fixes, JSON report)
+./mtdocker cs-fixer-ai
 
-# Run a single test
-./vendor/bin/mtdocker test --filter=TestClassName::testMethodName
+# PHPStan (JSON output)
+./mtdocker phpstan-ai
 
-# Run tests with coverage (HTML report in .phpunit.cache/coverage/)
-./vendor/bin/mtdocker test-coverage
+# Composer, inside the container
+./mtdocker composer <command>
 
-# Run tests with text coverage (AI-readable)
-./vendor/bin/mtdocker test-coverage-text
-
-# Run PHPStan static analysis
-./vendor/bin/mtdocker phpstan
-
-# Run PHP CS Fixer
-./vendor/bin/mtdocker cs-fixer
-
-# Run all checks (cs-fixer, test, phpstan)
-./vendor/bin/mtdocker all
+# All checks: cs-fixer, test, phpstan, composer audit
+./mtdocker all-ai
 ```
+
+The repository has no test suite and PHPUnit is not among its dev dependencies: the test step of `all-ai` fails with `./vendor/bin/phpunit: no such file or directory`, while the other steps still run and report.
 
 ## Architecture
 
@@ -114,7 +107,9 @@ On the first `mtdocker up -d` or `mtdocker all` in a fresh project or worktree, 
 
 ## Code Conventions
 
-- PHP 8.0+, no comments (self-documenting code)
+- PHP 8.0+, self-documenting code
+- Public open-source package: everything is in English — code, comments, docblocks, messages, documentation
+- A comment exists only when the code it sits on cannot be understood without it (a non-obvious trap, a guard whose condition reads backwards); anything the names, the control flow or the displayed messages already say is deleted, not translated
 - `DIRECTORY_SEPARATOR` for cross-platform paths
 - `escapeshellarg()` for user input in shell commands, `passthru()` for interactive commands
 - No try-catch unless necessary; prefer early returns
