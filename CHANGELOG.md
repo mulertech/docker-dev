@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/SemVer).
 
+## v3.14.0 - 2026-09-13
+
+- Added: every `ext-*` the project requires in `composer.json`, in `require` or `require-dev`, is installed into the web image on top of the extensions its Dockerfile carries. A requirement absent from the base PHP images — `ext-pcntl`, for instance — used to make Composer refuse every resolution inside the container, a targeted `update` included, with an error naming the extension but never the image.
+- Added: the list is read from `composer.json` at every command and passed to the build as `PHP_EXTENSIONS`, so adding a requirement needs no `init`. The five PHP Dockerfile templates install it and record it as the `mtdocker.php-extensions` image label.
+- Added: `up` checks the web image against `composer.json`. A matching label costs one `docker image inspect`; otherwise `mtdocker` asks the image which extensions it loads (`php -m`) and rebuilds it with `--build` when one is missing, naming it.
+- Added: when `.mtdocker/php/Dockerfile` does not install the declared extensions and the image lacks one, `up` names the missing extensions and asks for `mtdocker init`, instead of starting an image Composer will reject.
+- Note: an extension `install-php-extensions` does not know fails the build and names itself, so a requirement the image cannot satisfy is refused while building rather than at the first `composer install`. Extensions already present in the image are skipped.
+- **Migration**: projects whose image already loads every declared extension have nothing to do. The others run `mtdocker init` (the copied Dockerfile has to install `PHP_EXTENSIONS`), then `mtdocker up -d`, which rebuilds the image. A project whose Composer is already blocked by a missing extension cannot install this version from inside its own container: run that one `composer update mulertech/docker-dev` on a host PHP carrying the extension, or with `--ignore-platform-req=ext-<name>`.
+
 ## v3.13.0 - 2026-09-13
 
 - Added: `mtdocker phpstorm` configures the IDE for the current project — Docker interpreter and its volume binding, PHP language level read from `composer.json`, and PHPUnit with the configuration file and autoloader as seen from inside the container. It writes the project's `.idea/php.xml`, `.idea/php-docker-settings.xml` and `.idea/workspace.xml`, which is every setting that otherwise takes a pass through three settings dialogs per project.
