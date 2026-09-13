@@ -270,6 +270,12 @@ class Application
             return 0;
         }
 
+        // A bundle requires Symfony and Doctrine without being an application: it has no console
+        // to run the validation from, and no mapping of its own to validate.
+        if (!$this->composer->hasFile('bin/console')) {
+            return 0;
+        }
+
         $this->enableQuietMode();
 
         return $this->commandRegistry->executeCommand('symfony', [
