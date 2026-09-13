@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/SemVer).
 
+## v3.14.1 - 2026-09-13
+
+- Fixed: the Caddyfile generated in `.mtdocker/php/` is loaded. It was mounted on `/etc/caddy/Caddyfile`, while the FrankenPHP image starts with `--config /etc/frankenphp/Caddyfile`, so every project was served by the image's default configuration. Symfony applications worked because that default also serves `public/`; the `Cache-Control: immutable` rule the `postgis` variant sets on `/tiles/*` was never applied.
+- Fixed: the `frankenphp` module no longer sets `SERVER_NAME=:80`. It only made the image's default Caddyfile listen on port 80, and under the CLI it reached `$_SERVER`: any test building a request from globals received `:80` as server name, which `guzzlehttp/psr7` 2.13 rejects with `Invalid host: ":80"`.
+- Changed: a FrankenPHP project without the `symfony` module is served from `/app`, as its Caddyfile states, rather than from `/app/public`. The response compression of the image's default configuration no longer applies.
+- Fixed: `all-ai` no longer fails on a Symfony bundle using Doctrine. The schema validation ran whenever `composer.json` mentioned Symfony and Doctrine, and a bundle matches both without having a `bin/console`, so the step exited with "Could not open input file: bin/console". It runs only when `bin/console` exists.
+
 ## v3.14.0 - 2026-09-13
 
 - Added: every `ext-*` the project requires in `composer.json`, in `require` or `require-dev`, is installed into the web image on top of the extensions its Dockerfile carries. A requirement absent from the base PHP images — `ext-pcntl`, for instance — used to make Composer refuse every resolution inside the container, a targeted `update` included, with an error naming the extension but never the image.
