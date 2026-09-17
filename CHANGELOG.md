@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/SemVer).
 
+## v3.14.2 - 2026-09-17
+
+- Fixed: `mtdocker phpstorm` sets the path of PHPStan and PHP CS Fixer as the container sees it, `/app/vendor/bin/…` or `/var/www/html/vendor/bin/…`. PhpStorm had filled in its own mount point, `/opt/project`, which the image never has: every inspection run ended in a notification reading `stat /opt/project/vendor/bin/phpstan: no such file or directory`.
+- Note: only the tools present in `vendor/bin` are written, and the entry is edited in place, so the timeout and local configuration kept beside it survive. The report lists the tools configured, or the paths looked for when none is installed.
+- **Migration**: run `mtdocker phpstorm` again in each project, then `File | Reload All from Disk`.
+
 ## v3.14.1 - 2026-09-13
 
 - Fixed: the Caddyfile generated in `.mtdocker/php/` is loaded. It was mounted on `/etc/caddy/Caddyfile`, while the FrankenPHP image starts with `--config /etc/frankenphp/Caddyfile`, so every project was served by the image's default configuration. Symfony applications worked because that default also serves `public/`; the `Cache-Control: immutable` rule the `postgis` variant sets on `/tiles/*` was never applied.
