@@ -158,7 +158,7 @@ Points PhpStorm at the project's Docker image, so tests, Composer and PHP inspec
 ./vendor/bin/mtdocker phpstorm
 ```
 
-It writes the project's own `.idea` files — the Docker interpreter and its volume binding, the PHP language level read from `composer.json`, and PHPUnit with the configuration file and autoloader as seen from inside the container. The interpreter is named after the image (`<project-name>-web:latest`) and attached to the IDE's Docker server, so nothing has to be picked in a dialog.
+It writes the project's own `.idea` files — the Docker interpreter and its volume binding, the PHP language level read from `composer.json`, PHPUnit with the configuration file and autoloader as seen from inside the container, and PHPStan and PHP CS Fixer, when `vendor/bin` holds them, run through the interpreter from their container path. The interpreter is named after the image (`<project-name>-web:latest`) and attached to the IDE's Docker server, so nothing has to be picked in a dialog.
 
 The command refuses to write a half-working configuration: it names the missing piece when no module carries PHP, when the image is not built yet, when no PHPUnit configuration file is present, or when `composer.json` declares no PHP version.
 

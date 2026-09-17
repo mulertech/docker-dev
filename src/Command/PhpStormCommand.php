@@ -24,6 +24,17 @@ class PhpStormCommand
     /** Configuration file names, in the order PHPUnit itself resolves them. */
     private const array PHPUNIT_CONFIGS = ['phpunit.dist.xml', 'phpunit.xml.dist', 'phpunit.xml'];
 
+    /**
+     * Quality tools run through the interpreter, keyed by the binary name in `vendor/bin`:
+     * the `php.xml` component, its settings element and the per-interpreter entry holding the path.
+     * PhpStorm fills that path with its own mount point, `/opt/project`, which the container
+     * never has, so every inspection run fails with "no such file or directory".
+     */
+    private const array QUALITY_TOOLS = [
+        'phpstan' => ['PhpStan', 'PhpStan_settings', 'phpstan_by_interpreter'],
+        'php-cs-fixer' => ['PhpCSFixer', 'phpcsfixer_settings', 'phpcs_fixer_by_interpreter'],
+    ];
+
     /** Name of the Docker server the interpreter is attached to, as PhpStorm registers it. */
     private const string DOCKER_ACCOUNT = 'Docker';
 
@@ -76,6 +87,8 @@ class PhpStormCommand
             ));
         }
 
+        $qualityTools = $this->installedQualityTools($projectDir);
+
         $ideaDir = $projectDir.DIRECTORY_SEPARATOR.'.idea';
         if (!is_dir($ideaDir) && !mkdir($ideaDir, 0o775, true)) {
             return $this->fail(sprintf('Unable to create %s.', $ideaDir));
@@ -84,7 +97,7 @@ class PhpStormCommand
         $phpXmlPath = $ideaDir.DIRECTORY_SEPARATOR.'php.xml';
         $interpreterId = $this->interpreterId($phpXmlPath, $image) ?? $this->uuid();
 
-        $written = $this->writePhpXml($phpXmlPath, $image, $interpreterId, $languageLevel, $containerPath, $phpunitConfig)
+        $written = $this->writePhpXml($phpXmlPath, $image, $interpreterId, $languageLevel, $containerPath, $phpunitConfig, $qualityTools)
             && $this->writeDockerSettings($ideaDir.DIRECTORY_SEPARATOR.'php-docker-settings.xml', $interpreterId, $containerPath)
             && $this->writeWorkspace($ideaDir.DIRECTORY_SEPARATOR.'workspace.xml', $image);
 
@@ -92,7 +105,7 @@ class PhpStormCommand
             return 1;
         }
 
-        $this->report($image, $containerPath, $phpunitConfig, $languageLevel);
+        $this->report($image, $containerPath, $phpunitConfig, $languageLevel, $qualityTools);
 
         return 0;
     }
@@ -127,6 +140,15 @@ class PhpStormCommand
         return null;
     }
 
+    /** @return array<string> */
+    private function installedQualityTools(string $projectDir): array
+    {
+        return array_values(array_filter(
+            array_keys(self::QUALITY_TOOLS),
+            static fn (string $tool): bool => file_exists($projectDir.'/vendor/bin/'.$tool),
+        ));
+    }
+
     /** Reuses the id PhpStorm already gave this interpreter, so running twice declares it once. */
     private function interpreterId(string $phpXmlPath, string $image): ?string
     {
@@ -139,6 +161,7 @@ class PhpStormCommand
         return $interpreter?->getAttribute('id') ?: null;
     }
 
+    /** @param array<string> $qualityTools */
     private function writePhpXml(
         string $path,
         string $image,
@@ -146,6 +169,7 @@ class PhpStormCommand
         string $languageLevel,
         string $containerPath,
         string $phpunitConfig,
+        array $qualityTools,
     ): bool {
         $document = $this->loadOrCreate($path);
 
@@ -176,11 +200,51 @@ class PhpStormCommand
             $containerPath.'/vendor/autoload.php',
         ));
 
+        foreach ($qualityTools as $tool) {
+            $this->writeQualityTool($document, $tool, $interpreterId, $containerPath);
+        }
+
         $shared = $this->component($document, 'PhpProjectSharedConfiguration')
             ?? $this->appendComponent($document, 'PhpProjectSharedConfiguration');
         $shared->setAttribute('php_language_level', $languageLevel);
 
         return $this->save($document, $path);
+    }
+
+    /**
+     * Edits the tool's entry for this interpreter in place, keeping the timeout and the local
+     * configuration the IDE stores beside it. The entry becomes the only default one, since
+     * PhpStorm runs whichever entry carries the flag.
+     */
+    private function writeQualityTool(\DOMDocument $document, string $tool, string $interpreterId, string $containerPath): void
+    {
+        [$componentName, $settingsName, $entryName] = self::QUALITY_TOOLS[$tool];
+
+        $component = $this->component($document, $componentName) ?? $this->appendComponent($document, $componentName);
+
+        $settings = $this->firstElement($document, sprintf('/project/component[@name="%s"]/%s', $componentName, $settingsName));
+        if (!$settings instanceof \DOMElement) {
+            $settings = $document->createElement($settingsName);
+            $component->appendChild($settings);
+        }
+
+        $entry = null;
+        foreach ($this->elements($document, sprintf('/project/component[@name="%s"]/%s/%s', $componentName, $settingsName, $entryName)) as $candidate) {
+            if ($candidate->getAttribute('interpreter_id') === $interpreterId) {
+                $entry = $candidate;
+            } else {
+                $candidate->removeAttribute('asDefaultInterpreter');
+            }
+        }
+
+        if (null === $entry) {
+            $entry = $document->createElement($entryName);
+            $settings->appendChild($entry);
+        }
+
+        $entry->setAttribute('asDefaultInterpreter', 'true');
+        $entry->setAttribute('interpreter_id', $interpreterId);
+        $entry->setAttribute('tool_path', $containerPath.'/vendor/bin/'.$tool);
     }
 
     private function writeDockerSettings(string $path, string $interpreterId, string $containerPath): bool
@@ -375,12 +439,18 @@ class PhpStormCommand
         return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($bytes), 4));
     }
 
-    private function report(string $image, string $containerPath, string $phpunitConfig, string $languageLevel): void
+    /** @param array<string> $qualityTools */
+    private function report(string $image, string $containerPath, string $phpunitConfig, string $languageLevel, array $qualityTools): void
     {
+        $tools = [] === $qualityTools
+            ? 'none installed (looked for '.implode(', ', array_map(static fn (string $tool): string => 'vendor/bin/'.$tool, array_keys(self::QUALITY_TOOLS))).')'
+            : implode(', ', array_map(static fn (string $tool): string => $containerPath.'/vendor/bin/'.$tool, $qualityTools));
+
         echo 'PhpStorm configured:'.PHP_EOL
             .'  Interpreter      '.$image.' (Docker server "'.self::DOCKER_ACCOUNT.'")'.PHP_EOL
             .'  Project mounted  '.$containerPath.PHP_EOL
             .'  PHPUnit          '.$containerPath.'/'.$phpunitConfig.PHP_EOL
+            .'  Quality tools    '.$tools.PHP_EOL
             .'  Language level   '.$languageLevel.PHP_EOL
             .PHP_EOL
             .'The IDE rereads php.xml on its own. The interpreter selection lives in workspace.xml,'.PHP_EOL
