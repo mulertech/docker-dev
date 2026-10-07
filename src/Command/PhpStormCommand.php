@@ -4,6 +4,7 @@ namespace MulerTech\DockerDev\Command;
 
 use MulerTech\DockerDev\Composer;
 use MulerTech\DockerDev\Docker;
+use MulerTech\DockerDev\Symfony;
 
 /**
  * Points PhpStorm at the project's Docker image: PHP interpreter, language level and PHPUnit,
@@ -34,6 +35,9 @@ class PhpStormCommand
         'phpstan' => ['PhpStan', 'PhpStan_settings', 'phpstan_by_interpreter'],
         'php-cs-fixer' => ['PhpCSFixer', 'phpcsfixer_settings', 'phpcs_fixer_by_interpreter'],
     ];
+
+    /** Modules whose port generateTestEnvLocal() reads; postgis and pgvector publish theirs as POSTGRES_PORT. */
+    private const array DATABASE_MODULES = ['postgres', 'pgvector', 'postgis', 'mysql'];
 
     /** Name of the Docker server the interpreter is attached to, as PhpStorm registers it. */
     private const string DOCKER_ACCOUNT = 'Docker';
@@ -89,6 +93,11 @@ class PhpStormCommand
 
         $qualityTools = $this->installedQualityTools($projectDir);
 
+        $testDatabase = $this->writeTestEnvLocal($projectDir, $modules);
+        if (null === $testDatabase) {
+            return 1;
+        }
+
         $ideaDir = $projectDir.DIRECTORY_SEPARATOR.'.idea';
         if (!is_dir($ideaDir) && !mkdir($ideaDir, 0o775, true)) {
             return $this->fail(sprintf('Unable to create %s.', $ideaDir));
@@ -105,9 +114,54 @@ class PhpStormCommand
             return 1;
         }
 
-        $this->report($image, $containerPath, $phpunitConfig, $languageLevel, $qualityTools);
+        $this->report($image, $containerPath, $phpunitConfig, $languageLevel, $qualityTools, $testDatabase);
 
         return 0;
+    }
+
+    /**
+     * The container PhpStorm starts is outside the compose stack: the `postgres` host, the
+     * variables and the mounted secrets are all missing, so Symfony needs its own way in.
+     *
+     * @param array<string> $modules
+     *
+     * @return string|null what the report shows, null once the failure is reported
+     */
+    private function writeTestEnvLocal(string $projectDir, array $modules): ?string
+    {
+        if (!in_array('symfony', $modules, true)) {
+            return 'not needed (no symfony module)';
+        }
+
+        $databaseModules = array_intersect(self::DATABASE_MODULES, $modules);
+        if ([] === $databaseModules) {
+            return 'not needed (no database module)';
+        }
+
+        $symfony = new Symfony($this->composer);
+        $path = $symfony->testEnvLocalPath();
+
+        if (file_exists($path) && !$symfony->isTestEnvLocalGenerated()) {
+            $this->fail(sprintf(
+                '%s exists and was not written by mtdocker, so it is left untouched. Move its values to .env.test, delete it, then run again.',
+                $path,
+            ));
+
+            return null;
+        }
+
+        $mtdockerEnvPath = $projectDir.DIRECTORY_SEPARATOR.'.mtdocker'.DIRECTORY_SEPARATOR.'.env';
+        if (!$symfony->generateTestEnvLocal($mtdockerEnvPath)) {
+            $this->fail(sprintf(
+                'Module %s is active but %s declares no POSTGRES_PORT or MYSQL_PORT. Run \'mtdocker init\' to regenerate it.',
+                implode(', ', $databaseModules),
+                $mtdockerEnvPath,
+            ));
+
+            return null;
+        }
+
+        return '.env.test.local (host.docker.internal, port published by the stack)';
     }
 
     /** @param array<string> $modules */
@@ -440,7 +494,7 @@ class PhpStormCommand
     }
 
     /** @param array<string> $qualityTools */
-    private function report(string $image, string $containerPath, string $phpunitConfig, string $languageLevel, array $qualityTools): void
+    private function report(string $image, string $containerPath, string $phpunitConfig, string $languageLevel, array $qualityTools, string $testDatabase): void
     {
         $tools = [] === $qualityTools
             ? 'none installed (looked for '.implode(', ', array_map(static fn (string $tool): string => 'vendor/bin/'.$tool, array_keys(self::QUALITY_TOOLS))).')'
@@ -452,6 +506,7 @@ class PhpStormCommand
             .'  PHPUnit          '.$containerPath.'/'.$phpunitConfig.PHP_EOL
             .'  Quality tools    '.$tools.PHP_EOL
             .'  Language level   '.$languageLevel.PHP_EOL
+            .'  Test database    '.$testDatabase.PHP_EOL
             .PHP_EOL
             .'The IDE rereads php.xml on its own. The interpreter selection lives in workspace.xml,'.PHP_EOL
             .'which it rereads only on demand, so with the project open run now:'.PHP_EOL

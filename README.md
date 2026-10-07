@@ -160,7 +160,9 @@ Points PhpStorm at the project's Docker image, so tests, Composer and PHP inspec
 
 It writes the project's own `.idea` files — the Docker interpreter and its volume binding, the PHP language level read from `composer.json`, PHPUnit with the configuration file and autoloader as seen from inside the container, and PHPStan and PHP CS Fixer, when `vendor/bin` holds them, run through the interpreter from their container path. The interpreter is named after the image (`<project-name>-web:latest`) and attached to the IDE's Docker server, so nothing has to be picked in a dialog.
 
-The command refuses to write a half-working configuration: it names the missing piece when no module carries PHP, when the image is not built yet, when no PHPUnit configuration file is present, or when `composer.json` declares no PHP version.
+For a Symfony stack with a database module, it also writes `.env.test.local`. The container PhpStorm starts stands outside Docker Compose: it has neither the stack's network, nor its variables, nor its mounted secrets. The file gives Symfony a connection it can reach — `DATABASE_HOST=host.docker.internal`, the port the stack publishes, the credentials in plain text — read through the `when@test` overrides `mtdocker init` adds to `doctrine.yaml`, `mailer.yaml` and `framework.yaml`. Each later `mtdocker init` rewrites it, so it follows a port change; a `.env.test.local` the package did not write is never touched.
+
+The command refuses to write a half-working configuration: it names the missing piece when no module carries PHP, when the image is not built yet, when no PHPUnit configuration file is present, when `composer.json` declares no PHP version, or when a `.env.test.local` it did not write is in the way.
 
 **With the project open in the IDE, finish with `File | Reload All from Disk`.** PhpStorm rereads `php.xml` on its own, but the interpreter *selection* lives in `workspace.xml`, which it only rereads on demand — and quitting instead of reloading writes its in-memory copy back over that selection. Nothing to do when the project is closed.
 
@@ -542,7 +544,7 @@ Enabled via the same opt-in, the `photon` module starts a [rtuszik/photon-docker
 - **For Symfony projects**: Automatically configures Doctrine settings for PostgreSQL into `doctrine.yaml` (including `when@test` override for PHPStorm compatibility, and `server_version: '%env(default::DATABASE_SERVER_VERSION)%'` driven by the `DATABASE_SERVER_VERSION` variable so the same key works locally and in production)
 - **PostgreSQL major version**: set by `DATABASE_SERVER_VERSION` in `.mtdocker/.env` (defaults to `16`). That single key drives the image tag, the data mount point and Doctrine's `server_version`; only the major is used, so `16` and `16.4` both resolve to `postgres:16`. PostgreSQL 18+ is handled automatically (those images use a major-version subdirectory and refuse the legacy mount point). Switching major version requires removing the `postgres-data` volume.
 - **For Symfony projects**: Automatically configures Mailer to use MailPit into `mailer.yaml` (including `when@test` override for PHPStorm compatibility)
-- **For Symfony projects with database**: Generates `.env.test.local` with database connection settings for PHPStorm (`host.docker.internal`, dynamic port, credentials)
+- **For Symfony projects with database**: Rewrites `.env.test.local` when `mtdocker phpstorm` has generated it, so the database port it holds follows the stack
 - Provides a complete development environment ready to use
 
 #### Migration from legacy templates
@@ -595,7 +597,7 @@ Configure PHPStorm to work with your Docker development environment:
    - Path to script: `/app/vendor/autoload.php` (FrankenPHP) or `/var/www/html/vendor/autoload.php` (Apache-PHP)
 5. Default configuration file: `/app/phpunit.dist.xml` (FrankenPHP) or `/var/www/html/phpunit.dist.xml` (Apache-PHP)
 
-> **Note for Symfony projects:** PHPStorm runs tests outside of Docker Compose, so environment variables and secrets from compose files are not available. The `mtdocker init` command automatically generates a `.env.test.local` file with the database connection settings (`DATABASE_HOST=host.docker.internal`, dynamic port, credentials) and configures `when@test` overrides in `doctrine.yaml`, `mailer.yaml` and `framework.yaml` to use direct environment variables instead of file-based secrets. This file is regenerated on each `mtdocker init` to keep ports in sync.
+> **Note for Symfony projects:** PHPStorm runs tests outside of Docker Compose, so environment variables and secrets from compose files are not available. `mtdocker phpstorm` generates a `.env.test.local` file with the database connection settings (`DATABASE_HOST=host.docker.internal`, dynamic port, credentials), and `mtdocker init` configures `when@test` overrides in `doctrine.yaml`, `mailer.yaml` and `framework.yaml` to use direct environment variables instead of file-based secrets. Each `mtdocker init` rewrites the generated file to keep ports in sync.
 
 ## Architecture
 

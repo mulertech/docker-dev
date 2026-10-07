@@ -178,9 +178,10 @@ class Docker
             $symfony->configureFramework();
             $symfony->verifyConfiguration();
 
-            $hasDatabase = [] !== array_intersect(['postgres', 'pgvector', 'postgis', 'mysql'], $modules);
-            if ($hasDatabase) {
-                $symfony->generateTestEnvLocal($modules, $mtdockerPath.DIRECTORY_SEPARATOR.'.env');
+            // A re-init can move the database port, which the PhpStorm connection file has to follow.
+            if ($symfony->isTestEnvLocalGenerated() && !$symfony->generateTestEnvLocal($mtdockerPath.DIRECTORY_SEPARATOR.'.env')) {
+                echo "\n⚠️  .env.test.local no longer matches the stack: .mtdocker/.env declares no database port.\n";
+                echo "   Tests run from PhpStorm will not reach the database. Delete .env.test.local or add a database module.\n";
             }
         }
 
