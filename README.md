@@ -314,6 +314,8 @@ Runs `cs-fixer-ai`, `test-ai` and `phpstan-ai` in sequence, then two extra check
 - `composer audit --format=summary` — security advisories, condensed to a severity summary (run `mtdocker composer audit` for the detailed report)
 - `php bin/console doctrine:schema:validate --env=test` — only when the project is a Symfony application using Doctrine ORM: a bundle, which has no `bin/console`, is skipped
 
+Each step is framed by `=== <step> ===` and `=== <step>: exit <code> ===`, so a failing step can be told apart without parsing its report. The command exits with the code of the first failing step.
+
 ```sh
 ./vendor/bin/mtdocker all-ai
 ```

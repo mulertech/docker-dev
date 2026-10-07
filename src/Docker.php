@@ -846,7 +846,21 @@ class Docker
     {
         $this->ensureEnvironment();
         $command = $this->dockerComposeCommand().' down';
-        exec($command);
+
+        if (!$this->quiet) {
+            exec($command);
+
+            return;
+        }
+
+        // Compose reports each container it stops on stderr: in quiet mode those lines would
+        // interleave with the report of the command that just ran, so they are kept back
+        // unless stopping fails.
+        exec($command.' 2>&1', $output, $exitCode);
+
+        if (0 !== $exitCode) {
+            echo "Error stopping containers (exit code: $exitCode)\n".implode("\n", $output)."\n";
+        }
     }
 
     public function isDockerUp(): bool

@@ -231,18 +231,40 @@ class Application
     {
         $this->enableQuietMode();
 
+        $steps = [
+            'cs-fixer' => fn (): int => $this->handleCsFixerAi([]),
+            'test' => fn (): int => $this->handleTestAi([]),
+            'phpstan' => fn (): int => $this->handlePhpstanAi([]),
+            'schema-validate' => fn (): int => $this->handleSchemaValidateAi(),
+            'audit' => fn (): int => $this->handleAuditAi(),
+        ];
+
         $exitCode = 0;
-        foreach ([
-            $this->handleCsFixerAi([]),
-            $this->handleTestAi([]),
-            $this->handlePhpstanAi([]),
-            $this->handleSchemaValidateAi(),
-            $this->handleAuditAi(),
-        ] as $code) {
+        foreach ($steps as $name => $step) {
+            $code = $this->runAiStep($name, $step);
             $exitCode = 0 !== $exitCode ? $exitCode : $code;
         }
 
         return $exitCode;
+    }
+
+    /**
+     * Frame one all-ai step between two markers, the closing one carrying its exit code.
+     *
+     * The steps print one after the other on a single stream, and a JSON report ends without
+     * a newline: without the markers, whatever comes next lands on the same line and a reader
+     * filtering lines loses the report. The exit code also tells a failing step apart from a
+     * quiet one, which output alone cannot do once the steps are concatenated.
+     *
+     * @param callable(): int $step
+     */
+    private function runAiStep(string $name, callable $step): int
+    {
+        echo PHP_EOL.'=== '.$name.' ==='.PHP_EOL;
+        $code = $step();
+        echo PHP_EOL.'=== '.$name.': exit '.$code.' ==='.PHP_EOL;
+
+        return $code;
     }
 
     private function handleAuditAi(): int
