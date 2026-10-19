@@ -921,7 +921,7 @@ class Docker
                 if ($this->waitForDatabase($modules)) {
                     $this->runSetupStep(
                         'Running test database migrations...',
-                        'docker exec '.escapeshellarg($containerName).' php bin/console doctrine:migrations:migrate --no-interaction --env=test',
+                        'docker exec '.escapeshellarg($containerName).' php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --env=test',
                         $failures,
                     );
                 } else {

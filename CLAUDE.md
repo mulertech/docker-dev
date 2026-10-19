@@ -99,7 +99,7 @@ On the first `mtdocker up -d` or `mtdocker all` in a fresh project or worktree, 
 1. `composer install` — if `vendor/` directory does not exist
 2. `npm install` — if `package.json` exists but `node_modules/` does not (Symfony module only)
 3. `php bin/console tailwind:build` — if `symfonycasts/tailwind-bundle` is detected (Symfony module only)
-4. `php bin/console doctrine:migrations:migrate --no-interaction --env=test` — if `doctrine/doctrine-migrations-bundle` is detected and a database module is active (Symfony module only)
+4. `php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --env=test` — if `doctrine/doctrine-migrations-bundle` is detected and a database module is active (Symfony module only). `--allow-no-migration` lets a project that has no migration yet complete its setup: without it Doctrine exits 1 on "no registered migrations", the marker is never written and the setup reruns on every command. A migration that fails still fails the step
 
 **Database readiness:** Before running migrations, `waitForDatabase()` polls the database container (up to 30s) using `pg_isready` (PostgreSQL/pgvector/postgis) or `mysqladmin ping` (MySQL).
 
